@@ -1,0 +1,41 @@
+# 환경변수
+.env
+*/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 데이터베이스
+*.db
+
+# Telethon 세션 파일
+*.session
+*.session-journal
+
+# 다운로드 데이터
+valuechain_analyzer/_downloads/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
+
+# 별도 Git 저장소
+vocab-pwa/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 인증 파일
+credentials.json
+token.json
+
+# 모니터링 데이터
+watch_data.json

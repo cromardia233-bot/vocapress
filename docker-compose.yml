@@ -1,0 +1,82 @@
+services:
+  # 어닝콜 분석 봇 (Playwright + OpenAI Agents)
+  earnings-call-agent:
+    build: ./earnings_call_agent
+    container_name: earnings-call-agent
+    restart: always
+    env_file: ./earnings_call_agent/.env
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 종합 투자분석 봇 (Playwright + matplotlib + SQLite)
+  investment-analyst:
+    build: ./investment_analyst
+    container_name: investment-analyst
+    restart: always
+    env_file: ./investment_analyst/.env
+    environment:
+      - DB_PATH=/app/data/investment_data.db
+    volumes:
+      - investment-data:/app/data
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 텔레그램 채널 메시지 필터링 봇 (Telethon + SQLite)
+  telegram-stock-bot:
+    build: ./telegram-stock-bot
+    container_name: telegram-stock-bot
+    restart: always
+    env_file: ./telegram-stock-bot/.env
+    environment:
+      - DB_PATH=/app/data/bot.db
+      - SESSION_DIR=/app/data
+    volumes:
+      - stock-bot-data:/app/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 더쿠 화장품 크롤링 봇 (BeautifulSoup + SQLite)
+  theqoo-cosmetics-bot:
+    build: ./theqoo-cosmetics-bot
+    container_name: theqoo-cosmetics-bot
+    restart: always
+    env_file: ./theqoo-cosmetics-bot/.env
+    environment:
+      - DB_PATH=/app/data/bot_data.db
+    volumes:
+      - cosmetics-bot-data:/app/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  investment-data:
+  stock-bot-data:
+  cosmetics-bot-data:
