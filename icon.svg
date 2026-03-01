@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#3B82F6"/>
+  <text x="256" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="white">VP</text>
+  <rect x="126" y="260" width="260" height="8" rx="4" fill="rgba(255,255,255,0.4)"/>
+  <rect x="126" y="290" width="200" height="8" rx="4" fill="rgba(255,255,255,0.3)"/>
+  <rect x="126" y="320" width="230" height="8" rx="4" fill="rgba(255,255,255,0.3)"/>
+  <rect x="126" y="350" width="160" height="8" rx="4" fill="rgba(255,255,255,0.3)"/>
+  <circle cx="380" cy="390" r="40" fill="#FBBF24"/>
+  <text x="380" y="402" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#3B82F6">A</text>
+</svg>
