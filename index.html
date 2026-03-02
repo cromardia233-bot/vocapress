@@ -134,13 +134,12 @@ textarea.input-field{resize:vertical;min-height:80px}
 .quiz-card{background:#fff;border-radius:16px;padding:28px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column}
 .quiz-sentence{font-size:18px;line-height:1.7;color:var(--gray-800);margin-bottom:8px;word-break:keep-all}
 .quiz-sentence .blank{
-  display:inline;min-width:80px;border-bottom:2px solid var(--primary);
+  display:inline-block;min-width:60px;border-bottom:2px solid var(--primary);
   text-align:center;color:var(--primary);font-weight:700;
-  padding:0 4px;margin:0 2px;
+  padding:0 4px;margin:0 2px;vertical-align:baseline;
 }
 .quiz-source{font-size:12px;color:var(--gray-400);margin-bottom:8px}
-.quiz-translation{font-size:14px;color:var(--gray-600);font-style:italic;margin-bottom:16px;padding:8px 12px;background:var(--primary-light);border-radius:8px;line-height:1.6;overflow:hidden;max-height:0;padding:0 12px;margin-bottom:0;transition:max-height .3s ease,padding .3s ease,margin-bottom .3s ease}
-.quiz-translation.show{max-height:200px;padding:8px 12px;margin-bottom:16px}
+.quiz-translation{font-size:14px;color:var(--gray-600);font-style:italic;margin-bottom:16px;padding:8px 12px;background:var(--primary-light);border-radius:8px;line-height:1.6}
 .quiz-meaning{font-size:15px;color:var(--gray-600);margin-bottom:20px;padding:10px 14px;background:var(--gray-50);border-radius:8px}
 .quiz-input-area{margin-top:auto}
 .quiz-hint-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -817,22 +816,22 @@ async function showQuiz() {
   if (sentence) {
     // 문장에서 단어를 빈칸으로 대체 (정확히 일치하는 단어만)
     const regex = new RegExp(`\\b${escapeRegex(word.word)}\\b`, 'gi');
-    const blanked = escapeHtml(sentence.text).replace(regex, `<span class="blank">${'_'.repeat(word.word.length)}</span>`);
+    const blanked = escapeHtml(sentence.text).replace(regex, `<span class="blank">${'\u00A0'.repeat(word.word.length)}</span>`);
     sentenceEl.innerHTML = blanked;
     sourceEl.textContent = sentence.source ? `— ${sentence.source}` : '';
     // 한국어 번역 표시
     if (sentence.translation) {
       translationEl.textContent = sentence.translation;
-      translationEl.classList.add('show');
+      translationEl.style.display = 'block';
     } else {
       translationEl.textContent = '';
-      translationEl.classList.remove('show');
+      translationEl.style.display = 'none';
     }
   } else {
-    sentenceEl.innerHTML = `<span class="blank">${'_'.repeat(word.word.length)}</span>`;
+    sentenceEl.innerHTML = `<span class="blank">${'\u00A0'.repeat(word.word.length)}</span>`;
     sourceEl.textContent = '';
     translationEl.textContent = '';
-    translationEl.classList.remove('show');
+    translationEl.style.display = 'none';
   }
 
   meaningEl.textContent = `뜻: ${word.meaning}`;
@@ -857,7 +856,7 @@ function showHint() {
   const answer = word.word;
   hintLevel = Math.min(hintLevel + 1, answer.length - 1);
   const revealed = answer.slice(0, hintLevel);
-  const hidden = '_'.repeat(answer.length - hintLevel);
+  const hidden = '·'.repeat(answer.length - hintLevel);
   document.getElementById('quizHintText').textContent = revealed + hidden;
 }
 
@@ -1445,10 +1444,19 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-// ===== 샘플 데이터 (경제지 100문장) =====
+// ===== 샘플 데이터 (경제지 200문장) =====
+const SAMPLE_DATA_VERSION = 3;
 async function loadSampleData() {
+  const savedVer = await getSetting('sampleDataVersion', 0);
   const count = await db.words.count();
-  if (count > 0) return;
+  // 샘플 데이터 버전이 낡으면 초기화 후 재로드
+  if (count > 0 && savedVer >= SAMPLE_DATA_VERSION) return;
+  if (count > 0 && savedVer < SAMPLE_DATA_VERSION) {
+    await db.words.clear();
+    await db.sentences.clear();
+    await db.learningRecords.clear();
+    await db.dailyStats.clear();
+  }
 
   const today = todayStr();
   const S = [
@@ -1691,6 +1699,7 @@ async function loadSampleData() {
     await db.sentences.add({ text: sentence, source, translation: translation || '', wordIds, createdAt: today });
   }
 
+  await db.settings.put({ key: 'sampleDataVersion', value: SAMPLE_DATA_VERSION });
   showToast(`${totalWords}개 단어가 추가되었습니다!`, 'success');
 }
 
