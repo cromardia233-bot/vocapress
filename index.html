@@ -143,6 +143,10 @@ textarea.input-field{resize:vertical;min-height:80px}
 .quiz-translation.show{display:block}
 .quiz-meaning{font-size:15px;color:var(--gray-600);margin-bottom:20px;padding:10px 14px;background:var(--gray-50);border-radius:8px}
 .quiz-input-area{margin-top:auto}
+.quiz-hint-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.btn-hint{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;background:var(--gray-100);color:var(--gray-600);transition:all .2s;min-height:36px}
+.btn-hint:active{background:var(--gray-200)}
+.quiz-hint-text{font-size:15px;font-weight:700;color:var(--warning);letter-spacing:2px}
 .quiz-input-row{display:flex;gap:8px}
 .quiz-input-row input{flex:1}
 .quiz-input-row .btn{padding:12px 20px}
@@ -295,6 +299,10 @@ textarea.input-field{resize:vertical;min-height:80px}
         <div id="quizMeaning" class="quiz-meaning"></div>
         <!-- 입력 단계 -->
         <div id="quizInputArea" class="quiz-input-area">
+          <div class="quiz-hint-row">
+            <button class="btn-hint" onclick="showHint()">💡 힌트</button>
+            <span id="quizHintText" class="quiz-hint-text"></span>
+          </div>
           <div class="quiz-input-row">
             <input id="quizInput" class="input-field" type="text" placeholder="빈칸에 들어갈 단어를 입력하세요" autocomplete="off" autocapitalize="none" spellcheck="false">
             <button id="quizSubmitBtn" class="btn btn-primary" onclick="submitAnswer()">확인</button>
@@ -830,12 +838,27 @@ async function showQuiz() {
   meaningEl.textContent = `뜻: ${word.meaning}`;
   meaningEl.style.display = 'none';
 
+  // 힌트 초기화
+  hintLevel = 0;
+  document.getElementById('quizHintText').textContent = '';
+
   // 입력 초기화
   document.getElementById('quizInputArea').style.display = '';
   document.getElementById('quizResultArea').style.display = 'none';
   const input = document.getElementById('quizInput');
   input.value = '';
   setTimeout(() => input.focus(), 100);
+}
+
+// 힌트 기능: 누를 때마다 글자 하나씩 공개
+let hintLevel = 0;
+function showHint() {
+  const word = studyQueue[currentQuizIndex];
+  const answer = word.word;
+  hintLevel = Math.min(hintLevel + 1, answer.length - 1);
+  const revealed = answer.slice(0, hintLevel);
+  const hidden = '_'.repeat(answer.length - hintLevel);
+  document.getElementById('quizHintText').textContent = revealed + hidden;
 }
 
 function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
