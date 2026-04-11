@@ -443,6 +443,15 @@ body {
   font-weight: 600;
 }
 
+/* 가격 새로고침 */
+#refreshBtn.loading {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* 편집 모드 */
 .edit-toolbar {
   display: flex;
@@ -588,8 +597,12 @@ body {
 <body>
 
 <div class="header">
-  <h1>My Portfolio</h1>
+  <h1>
+    My Portfolio
+    <button id="refreshBtn" onclick="fetchPrices()" style="background:none;border:none;color:var(--accent-light);font-size:16px;cursor:pointer;padding:4px 8px;">&#8635;</button>
+  </h1>
   <div class="date" id="updateDate"></div>
+  <div id="priceStatus" style="font-size:11px;color:var(--yellow);margin-top:4px;display:none;"></div>
 </div>
 
 <nav class="tab-nav">
@@ -2392,6 +2405,143 @@ function deleteHolding(idx) {
   }
 }
 
+// Yahoo Finance 티커 변환
+function toYahooTicker(ticker) {
+  if (!ticker) return null;
+  if (ticker.startsWith('KOSDAQ:')) return ticker.replace('KOSDAQ:', '') + '.KQ';
+  if (ticker.startsWith('KRX:')) return ticker.replace('KRX:', '') + '.KS';
+  if (/^\d{6}$/.test(ticker)) return ticker + '.KQ';
+  if (ticker.startsWith('ASX:')) return ticker.replace('ASX:', '') + '.AX';
+  return ticker;
+}
+
+// 티커로 통화 결정 (시장 필드보다 티커 형식이 정확)
+function getCurrencyFromTicker(ticker) {
+  if (!ticker) return 'KRW';
+  if (ticker.endsWith('.KS') || ticker.endsWith('.KQ')) return 'KRW';
+  if (ticker.endsWith('.AX')) return 'AUD';
+  return 'USD';
+}
+
+// 실시간 가격 가져오기
+let fxRates = { usdkrw: 1484.57, audkrw: 1048.64 };
+
+async function fetchPrices() {
+  const btn = document.getElementById('refreshBtn');
+  const status = document.getElementById('priceStatus');
+  btn.classList.add('loading');
+  status.style.display = 'block';
+  status.textContent = '가격 업데이트 중...';
+  status.style.color = 'var(--yellow)';
+
+  try {
+    const holdings = DATA.holdings.holdings;
+    const yahooTickers = holdings
+      .map(h => toYahooTicker(h.ticker))
+      .filter(Boolean);
+
+    // 환율도 함께 요청
+    const allSymbols = [...new Set([...yahooTickers, 'KRW=X', 'AUDKRW=X'])];
+    const symbolStr = allSymbols.join(',');
+
+    const apiUrl = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + symbolStr;
+    // CORS 프록시 사용
+    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl);
+
+    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+    const json = await res.json();
+    const quotes = json.quoteResponse?.result || [];
+
+    if (quotes.length === 0) throw new Error('No data');
+
+    // 가격 맵 생성
+    const priceMap = {};
+    quotes.forEach(q => {
+      if (q.symbol === 'KRW=X') { fxRates.usdkrw = q.regularMarketPrice; return; }
+      if (q.symbol === 'AUDKRW=X') { fxRates.audkrw = q.regularMarketPrice; return; }
+      priceMap[q.symbol] = q.regularMarketPrice;
+    });
+
+    let updated = 0;
+    holdings.forEach(h => {
+      const yt = toYahooTicker(h.ticker);
+      if (!yt || priceMap[yt] == null) return;
+
+      const newPrice = priceMap[yt];
+      const currency = getCurrencyFromTicker(yt);
+      let fxRate = 1;
+      if (currency === 'USD') fxRate = fxRates.usdkrw;
+      else if (currency === 'AUD') fxRate = fxRates.audkrw;
+
+      h.currentPrice = newPrice;
+      h.currentValue = newPrice * (h.shares || 0) * fxRate;
+      if (h.buyPrice) {
+        h.returnPct = (newPrice - h.buyPrice) / h.buyPrice;
+        h.pnl = (newPrice - h.buyPrice) * (h.shares || 0) * fxRate;
+      }
+      updated++;
+    });
+
+    // 시장별 요약 재계산
+    recalcSummary();
+
+    // localStorage에 저장
+    saveHoldingsToLS(holdings);
+
+    // 마지막 업데이트 시간 저장
+    const now = new Date();
+    localStorage.setItem('portfolio_price_updated', now.toISOString());
+
+    // 렌더링
+    renderHoldings();
+    renderDashboard();
+
+    status.textContent = updated + '종목 업데이트 완료 (' + now.toLocaleTimeString('ko-KR') + ')';
+    status.style.color = 'var(--green)';
+  } catch(e) {
+    console.error('Price fetch error:', e);
+    status.textContent = '가격 업데이트 실패: ' + e.message;
+    status.style.color = 'var(--red)';
+  } finally {
+    btn.classList.remove('loading');
+    setTimeout(() => { status.style.display = 'none'; }, 5000);
+  }
+}
+
+// 시장별 요약 재계산
+function recalcSummary() {
+  const holdings = DATA.holdings.holdings;
+  const marketTotals = {};
+
+  holdings.forEach(h => {
+    const m = h.market;
+    if (!m) return;
+    if (!marketTotals[m]) marketTotals[m] = { value: 0, pnl: 0 };
+    marketTotals[m].value += h.currentValue || 0;
+    marketTotals[m].pnl += h.pnl || 0;
+  });
+
+  // 총 주식 가치
+  let totalStockValue = 0;
+  Object.values(marketTotals).forEach(t => totalStockValue += t.value);
+
+  // 총 자산 = 주식 + 예수금
+  const cash = DATA.holdings.summary.cash || 0;
+  DATA.holdings.totalAssets = totalStockValue + cash;
+  const total = DATA.holdings.totalAssets;
+
+  // 시장별 요약 업데이트
+  for (const [market, totals] of Object.entries(marketTotals)) {
+    if (DATA.holdings.summary[market]) {
+      const origCost = totals.value - totals.pnl;
+      DATA.holdings.summary[market].value = totals.value;
+      DATA.holdings.summary[market].weight = total > 0 ? totals.value / total : 0;
+      DATA.holdings.summary[market].pnl = totals.pnl;
+      DATA.holdings.summary[market].return = origCost > 0 ? totals.pnl / origCost : 0;
+    }
+  }
+}
+
 // 유틸리티 함수
 function formatKRW(val) {
   if (val == null) return '-';
@@ -2905,6 +3055,26 @@ renderHoldings();
 renderStrategy();
 renderWatchlist();
 renderTrades();
+
+// 페이지 로드 시 자동 가격 업데이트
+const lastUpdate = localStorage.getItem('portfolio_price_updated');
+if (lastUpdate) {
+  const elapsed = Date.now() - new Date(lastUpdate).getTime();
+  // 마지막 업데이트가 10분 이상 지났으면 자동 갱신
+  if (elapsed > 10 * 60 * 1000) {
+    fetchPrices();
+  } else {
+    const t = new Date(lastUpdate);
+    const el = document.getElementById('priceStatus');
+    el.style.display = 'block';
+    el.textContent = '마지막 가격 업데이트: ' + t.toLocaleTimeString('ko-KR');
+    el.style.color = 'var(--text-sub)';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
+} else {
+  // 첫 방문이면 바로 가격 가져오기
+  fetchPrices();
+}
 </script>
 </body>
 </html>
