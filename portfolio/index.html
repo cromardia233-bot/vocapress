@@ -1,0 +1,2910 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Portfolio Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0f1117;
+  --card: #1a1d27;
+  --card-hover: #22253a;
+  --border: #2a2d3a;
+  --text: #e4e6eb;
+  --text-sub: #8b8fa3;
+  --accent: #6c5ce7;
+  --accent-light: #a29bfe;
+  --green: #00b894;
+  --red: #e17055;
+  --blue: #74b9ff;
+  --yellow: #fdcb6e;
+  --orange: #e17055;
+  --tab-bg: #1a1d27;
+  --tab-active: #6c5ce7;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 70px;
+}
+
+/* 헤더 */
+.header {
+  background: linear-gradient(135deg, #1a1d27 0%, #2d1b69 100%);
+  padding: 20px 16px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid var(--border);
+}
+.header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header .date {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 4px;
+}
+
+/* 탭 네비게이션 */
+.tab-nav {
+  display: flex;
+  background: var(--tab-bg);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  position: sticky;
+  top: 68px;
+  z-index: 99;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.tab-btn.active {
+  color: var(--accent-light);
+  border-bottom-color: var(--tab-active);
+}
+
+/* 탭 컨텐츠 */
+.tab-content { display: none; padding: 16px; }
+.tab-content.active { display: block; }
+
+/* 대시보드 요약 카드 */
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.summary-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+.summary-card.full { grid-column: 1 / -1; }
+.summary-card .label {
+  font-size: 11px;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.summary-card .value {
+  font-size: 22px;
+  font-weight: 700;
+}
+.summary-card .value.positive { color: var(--green); }
+.summary-card .value.negative { color: var(--red); }
+.summary-card .sub {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 4px;
+}
+
+/* 차트 컨테이너 */
+.chart-container {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.chart-container h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+.chart-container canvas {
+  max-height: 250px;
+}
+
+/* 보유종목 카드 */
+.holding-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+  transition: background 0.2s;
+}
+.holding-card:active { background: var(--card-hover); }
+.holding-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.holding-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  max-width: 65%;
+}
+.holding-return {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+}
+.holding-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.tag {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(108, 92, 231, 0.15);
+  color: var(--accent-light);
+}
+.tag.market { background: rgba(116, 185, 255, 0.15); color: var(--blue); }
+.holding-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.holding-details span { display: flex; flex-direction: column; }
+.holding-details .detail-label { font-size: 10px; color: var(--text-sub); margin-bottom: 2px; }
+.holding-details .detail-value { font-size: 13px; color: var(--text); font-weight: 500; }
+
+/* 섹션 타이틀 */
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 20px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.section-title:first-child { margin-top: 0; }
+
+/* 전략 카드 */
+.strategy-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.strategy-card h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-light);
+  margin-bottom: 8px;
+}
+.strategy-card p, .strategy-card pre {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 섹터 비중 바 */
+.sector-bar {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 28px;
+  margin: 12px 0;
+}
+.sector-bar div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+}
+.sector-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.sector-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.sector-legend-item .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* 아코디언 */
+.accordion { margin-bottom: 8px; }
+.accordion-header {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+}
+.accordion-header:active { background: var(--card-hover); }
+.accordion-header .acc-title {
+  font-size: 13px;
+  font-weight: 600;
+  flex: 1;
+}
+.accordion-header .acc-date {
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-right: 8px;
+}
+.accordion-header .acc-decision {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  margin-right: 8px;
+}
+.acc-decision.buy { background: rgba(0, 184, 148, 0.2); color: var(--green); }
+.acc-decision.sell { background: rgba(225, 112, 85, 0.2); color: var(--red); }
+.acc-decision.hold { background: rgba(253, 203, 110, 0.2); color: var(--yellow); }
+.acc-decision.notinvest { background: rgba(139, 143, 163, 0.2); color: var(--text-sub); }
+.accordion-header .arrow {
+  font-size: 12px;
+  color: var(--text-sub);
+  transition: transform 0.2s;
+}
+.accordion.open .arrow { transform: rotate(180deg); }
+.accordion-body {
+  display: none;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: 14px 16px;
+}
+.accordion.open .accordion-header { border-radius: 10px 10px 0 0; }
+.accordion.open .accordion-body { display: block; }
+.accordion-body .field {
+  margin-bottom: 10px;
+}
+.accordion-body .field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-light);
+  margin-bottom: 4px;
+}
+.accordion-body .field-value {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 워치리스트 그룹 */
+.wl-group { margin-bottom: 20px; }
+.wl-group-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-light);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.wl-card {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.wl-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.wl-card-name { font-size: 13px; font-weight: 600; max-width: 70%; }
+.wl-card-change { font-size: 14px; font-weight: 700; }
+.wl-card-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+
+/* 거래내역 */
+.trade-card {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.trade-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.trade-name { font-size: 13px; font-weight: 600; }
+.trade-action {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.trade-action.buy { background: rgba(0, 184, 148, 0.2); color: var(--green); }
+.trade-action.sell { background: rgba(225, 112, 85, 0.2); color: var(--red); }
+.trade-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  font-size: 12px;
+}
+.trade-details .td-label { color: var(--text-sub); font-size: 10px; }
+.trade-details .td-value { color: var(--text); font-weight: 500; margin-top: 2px; }
+.trade-rationale {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+/* 자산배분 파이 레전드 */
+.alloc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+.alloc-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.alloc-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.alloc-info .alloc-label { color: var(--text-sub); font-size: 11px; }
+.alloc-info .alloc-value { font-weight: 600; }
+
+/* 시장별 그룹 헤더 */
+.market-group-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue);
+  padding: 10px 0 6px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.market-group-header .market-return {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 편집 모드 */
+.edit-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.edit-toolbar button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.edit-toolbar button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.edit-toolbar button.danger {
+  background: rgba(225,112,85,0.2);
+  border-color: var(--red);
+  color: var(--red);
+}
+.holding-card .edit-actions {
+  display: none;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.edit-mode .holding-card .edit-actions { display: flex; }
+.edit-actions button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card-hover);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+.edit-actions button.del { color: var(--red); border-color: var(--red); }
+
+/* 모달 */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--card);
+  border-radius: 16px 16px 0 0;
+  padding: 20px 16px 30px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.modal h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal h3 button {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  font-size: 20px;
+  cursor: pointer;
+}
+.form-group {
+  margin-bottom: 12px;
+}
+.form-group label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+.form-group input:focus, .form-group select:focus {
+  border-color: var(--accent);
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.modal .btn-save {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.ls-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(253,203,110,0.2);
+  color: var(--yellow);
+  margin-left: 6px;
+}
+
+/* 반응형 */
+@media (min-width: 600px) {
+  .tab-content { padding: 20px; max-width: 600px; margin: 0 auto; }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .modal { border-radius: 16px; margin-bottom: 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>My Portfolio</h1>
+  <div class="date" id="updateDate"></div>
+</div>
+
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('dashboard')">대시보드</button>
+  <button class="tab-btn" onclick="switchTab('holdings')">보유종목</button>
+  <button class="tab-btn" onclick="switchTab('strategy')">투자전략</button>
+  <button class="tab-btn" onclick="switchTab('watchlist')">워치리스트</button>
+  <button class="tab-btn" onclick="switchTab('trades')">거래내역</button>
+</nav>
+
+<div id="tab-dashboard" class="tab-content active"></div>
+<div id="tab-holdings" class="tab-content"></div>
+<div id="tab-strategy" class="tab-content"></div>
+<div id="tab-watchlist" class="tab-content"></div>
+<div id="tab-trades" class="tab-content"></div>
+
+<!-- 편집 모달 -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>
+      <span id="modalTitle">종목 편집</span>
+      <button onclick="closeModal()">&times;</button>
+    </h3>
+    <form id="editForm" onsubmit="saveHolding(event)">
+      <input type="hidden" id="editIdx">
+      <div class="form-group">
+        <label>종목명</label>
+        <input type="text" id="f_name" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>종목코드</label>
+          <input type="text" id="f_ticker">
+        </div>
+        <div class="form-group">
+          <label>시장</label>
+          <select id="f_market">
+            <option value="한국주식">한국주식</option>
+            <option value="미국주식">미국주식</option>
+            <option value="호주주식">호주주식</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tag</label>
+          <input type="text" id="f_tag">
+        </div>
+        <div class="form-group">
+          <label>업종</label>
+          <input type="text" id="f_industry">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>매입가</label>
+          <input type="number" id="f_buyPrice" step="any">
+        </div>
+        <div class="form-group">
+          <label>현재가</label>
+          <input type="number" id="f_currentPrice" step="any">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>주식수</label>
+          <input type="number" id="f_shares" step="any">
+        </div>
+        <div class="form-group">
+          <label>현재가치 (원)</label>
+          <input type="number" id="f_currentValue" step="any">
+        </div>
+      </div>
+      <button type="submit" class="btn-save">저장</button>
+    </form>
+  </div>
+</div>
+
+<script>
+const ORIGINAL_DATA = {
+  "holdings": {
+    "totalAssets": 53750562.93,
+    "holdings": [
+      {
+        "rank": 1.0,
+        "market": "미국주식",
+        "name": "State Street SPDR S&P 500 ETF Trust",
+        "ticker": "SPY",
+        "tag": "S&P 500 지수",
+        "industry": "ETF-S&P 500",
+        "weight": 0.1125985527,
+        "buyPrice": 449.9352,
+        "currentPrice": 679.46,
+        "shares": 6.0,
+        "currentValue": 6052235.593,
+        "pnl": 2044473.794,
+        "returnPct": 0.5064287546,
+        "dailyChange": -0.000661852304,
+        "dailyPnl": -4008.339
+      },
+      {
+        "rank": 2,
+        "market": "호주주식",
+        "name": "Metro Mining Ltd",
+        "ticker": "ASX:MMI",
+        "tag": "보크사이트 가격 상승",
+        "industry": "Commodities",
+        "weight": 0.05462094944,
+        "buyPrice": 0.0567,
+        "currentPrice": 0.07,
+        "shares": 39996.0,
+        "currentValue": 2935906.78,
+        "pnl": 557822.2882,
+        "returnPct": 0.2315432099,
+        "dailyChange": 0,
+        "dailyPnl": 0
+      },
+      {
+        "rank": 3,
+        "market": "한국주식",
+        "name": "SK Hynix Inc",
+        "ticker": "KRX:000660",
+        "tag": "HBM",
+        "industry": "Semiconductors",
+        "weight": 0.210174543,
+        "buyPrice": 570500.0,
+        "currentPrice": 1027000,
+        "shares": 11.0,
+        "currentValue": 11297000,
+        "pnl": 5021500,
+        "returnPct": 0.7957648554,
+        "dailyChange": 0.02905811623,
+        "dailyPnl": 319000
+      },
+      {
+        "rank": 4,
+        "market": "한국주식",
+        "name": "Alteogen Inc",
+        "ticker": "196170",
+        "tag": "제약 바이오",
+        "industry": "Biotech & Healthcare",
+        "weight": 0.02017653288,
+        "buyPrice": 302000.0,
+        "currentPrice": 361500,
+        "shares": 3.0,
+        "currentValue": 1084500,
+        "pnl": 178500,
+        "returnPct": 0.1940871689,
+        "dailyChange": -0.02297297297,
+        "dailyPnl": -25500
+      },
+      {
+        "rank": 5,
+        "market": "미국주식",
+        "name": "Xpeng Inc - ADR",
+        "ticker": "XPEV",
+        "tag": "자율주행&휴머노이드",
+        "industry": "Humanoid Robot",
+        "weight": 0.02646235573,
+        "buyPrice": 27.0665,
+        "currentPrice": 17.42,
+        "shares": 55.0,
+        "currentValue": 1422366.517,
+        "pnl": -787649.7478,
+        "returnPct": -0.3579767979,
+        "dailyChange": 0.007518796992,
+        "dailyPnl": 10614.6755
+      },
+      {
+        "rank": 6,
+        "market": "한국주식",
+        "name": "Pemtron Corp",
+        "ticker": "KOSDAQ:168360",
+        "tag": "반도체 검사장비",
+        "industry": "Semiconductors",
+        "weight": 0.05286921374,
+        "buyPrice": 21450.0,
+        "currentPrice": 21050,
+        "shares": 135.0,
+        "currentValue": 2841750,
+        "pnl": -54000,
+        "returnPct": -0.021052331,
+        "dailyChange": 0.04207920792,
+        "dailyPnl": 114750
+      },
+      {
+        "rank": 7,
+        "market": "한국주식",
+        "name": "Hana Micron Inc.",
+        "ticker": "KOSDAQ:067310",
+        "tag": "OSAT",
+        "industry": "Semiconductors",
+        "weight": 0.05767381458,
+        "buyPrice": 22880.0,
+        "currentPrice": 31000,
+        "shares": 100.0,
+        "currentValue": 3100000,
+        "pnl": 812000,
+        "returnPct": 0.3515756119,
+        "dailyChange": 0.04026845638,
+        "dailyPnl": 120000
+      },
+      {
+        "rank": 6,
+        "market": "미국주식",
+        "name": "Tesla Inc",
+        "ticker": "TSLA",
+        "tag": "자율주행&휴머노이드",
+        "industry": "Humanoid Robot",
+        "weight": 0.009639246582,
+        "buyPrice": 447.36,
+        "currentPrice": 349,
+        "shares": 1.0,
+        "currentValue": 518114.93,
+        "pnl": -146022.3052,
+        "returnPct": -0.2217789923,
+        "dailyChange": 0.009896406042,
+        "dailyPnl": 5077.2294
+      },
+      {
+        "rank": 7,
+        "market": "미국주식",
+        "name": "NVIDIA Corp",
+        "ticker": "NVDA",
+        "tag": "GPU",
+        "industry": "Artificial Intelligence (AI)",
+        "weight": 0.02606601422,
+        "buyPrice": 176.82,
+        "currentPrice": 188.75,
+        "shares": 5.0,
+        "currentValue": 1401062.938,
+        "pnl": 88554.6005,
+        "returnPct": 0.06485444237,
+        "dailyChange": 0.02614983147,
+        "dailyPnl": 35703.9085
+      },
+      {
+        "rank": 8,
+        "market": "미국주식",
+        "name": "Alphabet Inc Class A",
+        "ticker": "GOOGL",
+        "tag": "구글",
+        "industry": "Artificial Intelligence (AI)",
+        "weight": 0.04381299958,
+        "buyPrice": 302.526,
+        "currentPrice": 317.26,
+        "shares": 5.0,
+        "currentValue": 2354973.391,
+        "pnl": 109368.2719,
+        "returnPct": 0.04613392898,
+        "dailyChange": -0.003799296659,
+        "dailyPnl": -9055.877
+      },
+      {
+        "rank": 9,
+        "market": "미국주식",
+        "name": "Mirae Asset TIGER Semicon ETF",
+        "ticker": "KRX:091230",
+        "tag": "반도체",
+        "industry": "Semiconductors",
+        "weight": 0.02012351017,
+        "buyPrice": 59210.0,
+        "currentPrice": 108165,
+        "shares": 10.0,
+        "currentValue": 1081650,
+        "pnl": 489550,
+        "returnPct": 0.8223272378,
+        "dailyChange": 0.01027413254,
+        "dailyPnl": 11000
+      },
+      {
+        "rank": 10,
+        "market": "미국주식",
+        "name": "Brookfield Corp",
+        "ticker": "BN",
+        "tag": "인프라 자산운용",
+        "industry": "Digital Infrastructure",
+        "weight": 0.00116389069,
+        "buyPrice": 65.5598,
+        "currentPrice": 42.14,
+        "shares": 1.0,
+        "currentValue": 62559.7798,
+        "pnl": -34768.33249,
+        "returnPct": -0.3588028487,
+        "dailyChange": -0.004488542405,
+        "dailyPnl": -282.0683
+      }
+    ],
+    "summary": {
+      "cash": 19598443,
+      "미국주식": {
+        "weight": 0.2398665697,
+        "value": 12892963.15,
+        "pnl": 1763506.281,
+        "return": 0.1584539391
+      },
+      "호주주식": {
+        "weight": 0.05462094944,
+        "value": 2935906.78,
+        "pnl": 557822.2882,
+        "return": 0.2345679012
+      },
+      "한국주식": {
+        "weight": 0.3408941042,
+        "value": 18323250,
+        "pnl": 5958000,
+        "return": 0.4818341724
+      }
+    }
+  },
+  "portfolioValue": {
+    "startingValue": 26132315,
+    "months": [
+      {
+        "month": 1,
+        "date": "2025-01-31",
+        "endValue": 25654903,
+        "portfolioReturn": -0.01826902821,
+        "portfolioIndexed": 0.9817309718,
+        "sp500Return": 0.02701632031,
+        "sp500Indexed": 1.02701632,
+        "kospiReturn": 0.04912710618,
+        "kospiIndexed": 1.049127106
+      },
+      {
+        "month": 2,
+        "date": "2025-02-28",
+        "endValue": 25799711,
+        "portfolioReturn": 0.005644457124,
+        "portfolioIndexed": 0.9872723102,
+        "sp500Return": -0.01424212776,
+        "sp500Indexed": 1.012389423,
+        "kospiReturn": 0.00612146804,
+        "kospiIndexed": 1.055549304
+      },
+      {
+        "month": 3,
+        "date": "2025-03-31",
+        "endValue": 23558420,
+        "portfolioReturn": -0.0868727173,
+        "portfolioIndexed": 0.9015052819,
+        "sp500Return": -0.05754471408,
+        "sp500Indexed": 0.9541317628,
+        "kospiReturn": -0.0203965603,
+        "kospiIndexed": 1.034019729
+      },
+      {
+        "month": 4,
+        "date": "2025-04-30",
+        "endValue": 22826228,
+        "portfolioReturn": -0.03107984322,
+        "portfolioIndexed": 0.8734866391,
+        "sp500Return": -0.007624936518,
+        "sp500Indexed": 0.9468565687,
+        "kospiReturn": 0.03042577546,
+        "kospiIndexed": 1.065480581
+      },
+      {
+        "month": 5,
+        "date": "2025-05-31",
+        "endValue": 22734822,
+        "portfolioReturn": -0.02590905514,
+        "portfolioIndexed": 0.8508554256,
+        "sp500Return": 0.06152384783,
+        "sp500Indexed": 1.005110828,
+        "kospiReturn": 0.05517462577,
+        "kospiIndexed": 1.124268074
+      },
+      {
+        "month": 6,
+        "date": "2025-06-30",
+        "endValue": 25116638,
+        "portfolioReturn": 0.1047651044,
+        "portfolioIndexed": 0.939995383,
+        "sp500Return": 0.04960679603,
+        "sp500Indexed": 1.054971156,
+        "kospiReturn": 0.1386492788,
+        "kospiIndexed": 1.280147031
+      },
+      {
+        "month": 7,
+        "date": "2025-07-31",
+        "endValue": 27007238,
+        "portfolioReturn": 0.07527281318,
+        "portfolioIndexed": 1.01075148,
+        "sp500Return": 0.02166657266,
+        "sp500Indexed": 1.077828765,
+        "kospiReturn": 0.05656151317,
+        "kospiIndexed": 1.352554084
+      },
+      {
+        "month": 8,
+        "date": "2025-08-31",
+        "endValue": 27485391,
+        "portfolioReturn": 0.01770462422,
+        "portfolioIndexed": 1.028646455,
+        "sp500Return": 0.01906650324,
+        "sp500Indexed": 1.098379191,
+        "kospiReturn": -0.01831184678,
+        "kospiIndexed": 1.327786321
+      },
+      {
+        "month": 9,
+        "date": "2025-09-30",
+        "endValue": 43819948,
+        "portfolioReturn": 0.07790021979,
+        "portfolioIndexed": 1.10877824,
+        "sp500Return": 0.0353236557,
+        "sp500Indexed": 1.137177959,
+        "kospiReturn": 0.0748867706,
+        "kospiIndexed": 1.427219951
+      },
+      {
+        "month": 10,
+        "date": "2025-10-31",
+        "endValue": 50946293,
+        "portfolioReturn": 0.02471032143,
+        "portfolioIndexed": 1.136176507,
+        "sp500Return": 0.02268683673,
+        "sp500Indexed": 1.16297693,
+        "kospiReturn": 0.1994101501,
+        "kospiIndexed": 1.711822096
+      },
+      {
+        "month": 11,
+        "date": "2025-11-30",
+        "endValue": 47483280,
+        "portfolioReturn": -0.06797379743,
+        "portfolioIndexed": 1.058946275,
+        "sp500Return": 0.0012996696,
+        "sp500Indexed": 1.164488416,
+        "kospiReturn": -0.04404382228,
+        "kospiIndexed": 1.636426907
+      },
+      {
+        "month": 12,
+        "date": "2025-12-31",
+        "endValue": 48597161,
+        "portfolioReturn": 0.02335308344,
+        "portfolioIndexed": 1.083675936,
+        "sp500Return": -0.0005241572238,
+        "sp500Indexed": 1.163878041,
+        "kospiReturn": 0.07323912097,
+        "kospiIndexed": 1.756277376
+      },
+      {
+        "month": 13,
+        "date": "2026-01-31",
+        "endValue": 51799973,
+        "portfolioReturn": 0.06590533138,
+        "portfolioIndexed": 1.155095957,
+        "sp500Return": 0.01366299029,
+        "sp500Indexed": 1.179780095,
+        "kospiReturn": 0.2397126836,
+        "kospiIndexed": 2.177279339
+      },
+      {
+        "month": 14,
+        "date": "2026-02-28",
+        "endValue": 53750562.93,
+        "portfolioReturn": 0.03765619585,
+        "portfolioIndexed": 1.198592477,
+        "sp500Return": null,
+        "sp500Indexed": 1.179780095,
+        "kospiReturn": null,
+        "kospiIndexed": 2.177279339
+      }
+    ]
+  },
+  "strategy": {
+    "strategyDate": "2026-01-03",
+    "assetAllocation": "1) 주식 80 : 현금 20\n2) 강세장 중기/후기이므로 가격에 유의하면서 절대 무리X\n3) 목표 수익률 30%",
+    "investmentStrategy": "1) 반도체 30% : 휴머노이드 20% : 가스/원자재 30% : 코어주식 20%\n2) 반도체는 닉스 +  반도체 소부장 업체들 위주로 고베타 투자\n3) 코어주식은 Risk-Return이 좋지 않은 상황이므로 조정 있을때 조금씩 모아감. \n4) 에너지, 가스, 원자재 관련 기업 발굴\n5) 휴머노이드+자율주행 테마 유지(현대차?)",
+    "sectors": [
+      {
+        "name": "반도체",
+        "weight": 0.3,
+        "targetReturn": 0.5
+      },
+      {
+        "name": "휴머노이드",
+        "weight": 0.2,
+        "targetReturn": 0.5
+      },
+      {
+        "name": "원자재",
+        "weight": 0.3,
+        "targetReturn": 0.1
+      },
+      {
+        "name": "코어주식",
+        "weight": 0.2,
+        "targetReturn": 0.1
+      }
+    ],
+    "strategyMemo": "루빈에 들어가는 LPDDR 블랙웰 대비 3배\n근데 이미 SKH, Micron DRAM capa는 CSP에 의해 전량 솔드아웃 \n-> 그럼 어디가지? 삼성전자가서 사정해야지. \n루빈에서 3배 DRAM 수요 + HBM4 수율 올라오는데 시간 걸림 -> DRAM 주요 업체 수혜(난야, 윈본드)",
+    "judgements": [
+      {
+        "date": "2026-02-01",
+        "category": "중국주식",
+        "name": "Xpeng Inc - ADR",
+        "ticker": "XPEV",
+        "tag": "자율주행&휴머노이드",
+        "industry": "Semiconductors",
+        "decision": "매도",
+        "thesis": null,
+        "logic": "주가가 30% 이상 빠지기도 해서 손절이기도 하고, \n\n1) 최근에 나온 샤오펑 IRON이 걷는 것 이외에 이렇다할 성능을 보여주지 못하는 것으로 확인돼서 네러티브 약화 \n2) 수익성이 나오는 기업 위주로 장세가 이어질 것 같아, 단기 실적 부진 가능성이 있는 샤오펑 exposure는 줄이기로 결정. \n3) 또한, 나혼자서도 보유해갈 수 있을 정도로 확신이 없다는 점도 매도 의견에 영향을 줌. ",
+        "result": null,
+        "resultReturn": null
+      },
+      {
+        "date": "2026-01-30",
+        "category": "한국주식",
+        "name": "Hyosung Heavy Industries Corp",
+        "ticker": "KRX:298040",
+        "tag": "단기 실적 플레이",
+        "industry": "Electrical Equipemnt",
+        "decision": "매수&매도",
+        "thesis": "텔레그램에서 받)으로 성과 잘나왔다는 것 & 준수형 등 산다는 것 보고 진입",
+        "logic": "실적 잘나와서 단기적으로 상승할 것이라 보고 진입",
+        "result": "무지성으로 매매했고, 실적은 잘나왔지만 시장 기대감을 충족하진 못해서 주가가 하락함. \n오히려 잘됐다고 생각하는데, 논리가 빈약하고 scaling이 안되는 투자판단이 망할 수 있다는 걸 느끼게 됨. \n잘되든 못되든 이런식의 트레이딩은 하지말자. ",
+        "resultReturn": null
+      },
+      {
+        "date": "2026-01-30",
+        "category": "한국주식",
+        "name": "전력기기주 top3 etf",
+        "ticker": "KRX:0117V0",
+        "tag": "단기 실적 플레이",
+        "industry": "Electrical Equipemnt",
+        "decision": "매수&매도",
+        "thesis": "텔레그램에서 받)으로 성과 잘나왔다는 것 & 준수형 등 산다는 것 보고 진입",
+        "logic": "실적 잘나와서 단기적으로 상승할 것이라 보고 진입",
+        "result": null,
+        "resultReturn": null
+      },
+      {
+        "date": "2026-01-25",
+        "category": "중국주식",
+        "name": "n/a",
+        "ticker": "CXMT",
+        "tag": "중국의 삼성전자",
+        "industry": "Semiconductors",
+        "decision": "Not invest",
+        "thesis": "CXMT will have trouble expanding to DRAm under 10 nm due to constraints in EUV / ALD equipments.",
+        "logic": "CXMT needs  access to EUV and ALD equipments to further expand into smaller memory manufacturing. \nDue to US restrictions on EUV machines, CXMT cannot purchase them.\nAlso, China is far behind in making any of the EUV devices by themselves. \nMulti patterning technique will be too costly to make any of advanced node chips.\nWithout advanced chips, the chip maker will not get much growth. \nThere can be some revenue upside due to tight constraints on legacy node memory chips. However, in the long-run, without advanced node chips the growth of the company is faily limited. ",
+        "result": null,
+        "resultReturn": null
+      },
+      {
+        "date": "2026-01-17",
+        "category": "미국주식",
+        "name": "Babcock & Wilcox Enterprises Inc",
+        "ticker": "BW",
+        "tag": "화력발전 기자재",
+        "industry": "Electrical Equipemnt",
+        "decision": "Not invest",
+        "thesis": null,
+        "logic": null,
+        "result": null,
+        "resultReturn": null
+      },
+      {
+        "date": "2025-11-24",
+        "category": "한국주식",
+        "name": "SK Hynix Inc",
+        "ticker": "KRX:000660",
+        "tag": "HBM",
+        "industry": "Semiconductors",
+        "decision": "매수",
+        "thesis": "SKH의 26년 영업이익은 100조대를 달성할 것이라 예상되며, HBM 및 메모리 장기계약을 통해 기존 사이클 산업을 벗어난 구조적 성장의 수혜를 누릴 수 있을 것으로 보인다. \n",
+        "logic": "1) SKH is likely to get an Operating profit of 100tn KRW in 2026.\n2) Demand for memory(HBM, DRAM) keeps up. AI Datacenter capex growth keeps its pace. Memory keeps being bottleneck of AI development.\nShort term: Dram price keeps its rise or at least stays at high level. \n3) Technical progress can shrink the importance of HBM, If companies that lag in AI(Meta, Microsoft) cuts back on their spending on data center, the demand for chips will be smaller hence revenue of SKH can be decreased. \n4) Dram shortage news, SKH revenue, Chairman Choi's remarks, Samsung/Micron's earnings\n5) A lot of hype about structural growth in memory semiconductors is already priced in. Uncertainty in achieving OP 100 keeps the price at lower level. Micron's stock price\n6) ",
+        "result": null,
+        "resultReturn": null
+      },
+      {
+        "date": "2025-11-24",
+        "category": "한국주식",
+        "name": "SK Hynix Inc",
+        "ticker": "KRX:000660",
+        "tag": "HBM",
+        "industry": "Semiconductors",
+        "decision": "매수",
+        "thesis": "SKH의 26년 영업이익은 100조대를 달성할 것이라 예상되며, HBM 및 메모리 장기계약을 통해 기존 사이클 산업을 벗어난 구조적 성장의 수혜를 누릴 수 있을 것으로 보인다. \n",
+        "logic": "1) SKH is likely to get an Operating profit of 100tn KRW in 2026.\n2) Demand for memory(HBM, DRAM) keeps up. AI Datacenter capex growth keeps its pace. Memory keeps being bottleneck of AI development.\nShort term: Dram price keeps its rise or at least stays at high level. \n3) Technical progress can shrink the importance of HBM, If companies that lag in AI(Meta, Microsoft) cuts back on their spending on data center, the demand for chips will be smaller hence revenue of SKH can be decreased. \n4) Dram shortage news, SKH revenue, Chairman Choi's remarks, Samsung/Micron's earnings\n5) A lot of hype about structural growth in memory semiconductors is already priced in. Uncertainty in achieving OP 100 keeps the price at lower level. Micron's stock price\n6) ",
+        "result": null,
+        "resultReturn": 0.752559727
+      },
+      {
+        "date": "2025-11-25",
+        "category": "미국주식",
+        "name": "Alphabet Inc Class A",
+        "ticker": "GOOGL",
+        "tag": "The AI company",
+        "industry": "Artificial Intelligence (AI)",
+        "decision": "매수",
+        "thesis": "5년 뒤에도 top 10 company 안에 구글이 있을거라 믿는다. \n그렇다면 5년뒤의 시가총액은 현재 수준인 5500조 이상일거라 믿는다",
+        "logic": "1) 구글이 가진 기술적 해자와 혁신성을 고려했을 때, 앞으로 5년 뒤 2031년에는 지금보다 시가총액이 더 큰 회사가 되어 있을 것임. \n2) 과거 구글이 유지해온 혁신의 DNA (TPU, Google Brain, Waymo 등)이 계속해서 유지될 것임. \n3) 1) 웨이모가 테슬라에 밀려 현재 인정받는 기업가치를 받지 못하는 경우, 2) Jeff Dean 등 구글의 핵심 인력이 이탈하여 Anthropic등에 참여하는 경우, 3) AI로 인한 대규모 경기 침체로 광고시장 수요가  감소하는 경우. \n4) Gemini의 유저 성장세, 인력시장에서 구글이 가지는 위치가 유지되는지 여부 - glassdoor 등? -> hard to check, executive talks, 지금까지 잘해온 경영진이 계속 유지되는지 여부 + buy more when quality of the stock is preserved but price falls a lot\n5) Hard to say its cheap but still see upside potential in the way that Google will be at technology forefront even 5~10 years from now. \n6) Since this is a core stock that I hope to keep until my death / and be a part of I will keep gathering this stock at a steady pace(1 stock every 2month)\n7) Core stocks with compounding qualities\n8) Time Horizon : 20 years\n9) When google's new leadership shows lack of innovation(Specific clues are yet to be determined), When Google's main talent moves toward different companies",
+        "result": null,
+        "resultReturn": 0.05056458823
+      },
+      {
+        "date": "2025-11-25",
+        "category": "미국주식",
+        "name": "Xpeng Inc - ADR",
+        "ticker": "XPEV",
+        "tag": "자율주행&휴머노이드",
+        "industry": "Humanoid Robot",
+        "decision": "매수",
+        "thesis": "26년에는 테슬라 휴머노이드 대량 생산으로 휴머노이드 섹터에 관심이 늘 것으로 예상됨. 이 경우 샤오펑의 주가도 상승할 것으로 예상됨. ",
+        "logic": null,
+        "result": null,
+        "resultReturn": -0.3563999778
+      },
+      {
+        "date": "2025-10-13",
+        "category": "미국주식",
+        "name": "Super Micro Computer Inc",
+        "ticker": "SMCI",
+        "tag": "데이터센터",
+        "industry": "Data Centers",
+        "decision": "매수",
+        "thesis": null,
+        "logic": null,
+        "result": "The reason I fucked up : \n1) It wasn't a segregated market at the first place. Neoclouds bought from Dell and Big Techs bought from supermicro computer. \nThe hypothesis that neoclouds' capex was locked in supermicro computer was a naive claim. \n\n2) Negotiation power lies in chips, rather than the rack assembly itself. Nvidia decides to whom they sell their chips, so they have autonomy on chip sale. \nHowever, rack assembly companies are in competitive landscape and has to get bulk deals from big techs to meet their revenues. This results in margin compression and not-so-sexy revenue growth.\n\n3) Nvidia plans to cut out mark-up margins by moving towards full rack manufactoring. This results in further margin compression for rack assembly companies, limiting their growth trajectory in the future. ",
+        "resultReturn": -0.5597001917
+      },
+      {
+        "date": "2025-10-23",
+        "category": "미국주식",
+        "name": "Uniqure NV",
+        "ticker": "QURE",
+        "tag": "암치료제",
+        "industry": "Biotech & Healthcare",
+        "decision": "매수",
+        "thesis": null,
+        "logic": null,
+        "result": null,
+        "resultReturn": -0.7574897509
+      },
+      {
+        "date": "2025/09/25\n2025/10/22",
+        "category": "미국주식",
+        "name": "Applied Optoelectronics Inc",
+        "ticker": "AAOI",
+        "tag": "광트랜시버",
+        "industry": "Data Centers",
+        "decision": "매수",
+        "thesis": "4Q25 800G 퀄 통과하고 ramp-up 시작하면 주가가 빠르게 반등할 것이다. ",
+        "logic": "1) 4Q25 하이퍼스케일러향 800G 퀄 테스트 통과할 것이고, Ramp-up으로 25-26 실적 반등할 것이다. \n2) \n3) 퀄 통과 못하면? / 전방 수요 줄면? / CPO로 전환하면 낙동강 오리알 아닌가?\n4) 4Q25 퀄 통과여부, 향후 ramp-up이 성공적인지 어닝콜 확인, Lumentum 등 관련주 어닝콜에서 전방수요 확인\n5) 소형주라 위험성+ramp-up및 퀄테스트 통과 불확실성+실적(-)\n6) top6에 겨우 들어갈 정도 + non quality stock + 소형주라 비중을 많이주기는 힘듦. \n7) 턴어라운드 + 소형주 고베타 플레이\n8) 1Y, 퀄테스트 통과 기대\n9) 퀄 통과 X or CPO 조기 적용 뉴스 or 전고점 돌파 실패?(exit valuation에 대해 확인 못함)",
+        "result": null,
+        "resultReturn": 3.920073311
+      },
+      {
+        "date": "2025-09-22",
+        "category": "미국주식",
+        "name": "TransMedics Group Inc",
+        "ticker": "TMDX",
+        "tag": "장기이식",
+        "industry": "Biotech & Healthcare",
+        "decision": "매수 (100만원)",
+        "thesis": null,
+        "logic": "1) 확실한 기술적 우위를 바탕으로 미국 내 장기이식 시장 독점. & DBD, DCD  장기 util율 아직 높지 않아 성장할 룸이 존재.  \n2) Liver가 매출성장 견인, 간 특성 상 아이스박스 운송 시 합병증 발생위험이 높아 OCS가 중요\n3) 메디컬 업계 특성상 초기 진입이 어려우나 TMDX의 경우 OCS 시스템이 어느정도 정착하는 단계\n4) Liver 매출 성장, OCS Kidney 출시, 유럽시장(미국의 80%) 진출이 주요 성장동력\n5) 3년간 매출 50% 성장, OPM 15% 유지 시 36mf PER 20배 수준으로 대략 3년 뒤의 미래까지 이미 pricing된 셈\n6) 최근 CEO 20억 장내매수(전체 700억 지분), 확실한 기술적 우위 및 앞으로의 고성장 고려 시 진입 고려할만한 구간. ",
+        "result": null,
+        "resultReturn": 0
+      },
+      {
+        "date": "2025-08-24",
+        "category": "미국주식",
+        "name": "MARA Holdings Inc",
+        "ticker": "MARA",
+        "tag": "비트코인 DAT",
+        "industry": "Digital Asset",
+        "decision": "보류(Watchlist추가)",
+        "thesis": null,
+        "logic": "1) 비트코인 불장시 P/NAV상승으로 밸류에이션 상승 기대 + NAV자체 상승으로 레버리지 효과 가능\n2) 비트코인 채굴 + DAT전략으로 하이브리드 프리미엄 가능하지 않을까? -> 이건 애매... 현재 프리미엄이 없고, 비트코인 채굴에서 큰 밸류를 못받고 있는데 왜?? 원가 미만으로 채굴할 수 있고, 전력도 많이 쓰지 않으면 좋은데 왜 안되지.. \n3) 그러면 왜 불장이 오는지? 1) 인플레로 현금이 녹고 있어서 자산가치 방어수단인 디지털 금 = 비트코인이 각광, 2) 기관투자자들이 들어와서 가격하방형성(각국 정부 및 기업 매입분은 단타가 아닐듯.. ), 3) 반감기로 신규 공급은 주는데 수요는 점차 증가\n4) 비트코인 가격을 뒷받침하는 논리는 합리적이라고 생각. DAT기업의 경우 과거 비트코인 가격 대비 밸류에이션을 살펴봐야겠지만 투자 매력도는 있다고 생각.",
+        "result": null,
+        "resultReturn": null
+      },
+      {
+        "date": "2025-08-23",
+        "category": "미국주식",
+        "name": "Planet Fitness Inc",
+        "ticker": "PLNT",
+        "tag": "헬스클럽",
+        "industry": "Biotech & Healthcare",
+        "decision": "보류(밸류 고려 부족)",
+        "thesis": null,
+        "logic": "1) 미국이 건강해지고 있음. 사람들이 GLP-1을 맞으면서 체중감량을 하고, 이를 유지하며 건강한 식단, 운동에 관심을 갖고 있음. \n2) 미국에 상장된 헬스클럽 업체 중, planet fitness의 트래픽이 지속적으로 증가하는 중. 이는 planet fitness의 경쟁력인 저렴한 가격과 초보자가 참여하기 좋은 헬스장 문화로부터 기인함. \n3) ir상 foot traffic data, google trend data, tictoc data등 트래픽이 25년 2분기 들어 증가하는 추세\n4) 여름(여름방학)과 겨울(새해)가 신규 고객이 많이 유입되는 시기인데, 이번 여름 처음으로 겨울 대비 트래픽이 높게 나옴. + 높은 여름 사전 예약 수요를 고려할 때 분기 실적 기대\n5) 고가 라인인 black 라인 비중 증가로 asp상승여력있으며, 25년 4분기 추가 가격 상승 전망. 이전 스탠다드 라인 가격 상승 시 이탈율 높지 않았던 것을 고려할 때 이탈율을 제한하면서 수익화 기대. \n6) 단기적인 관점에서 실적 플레이 괜찮아 보이고, 2-3년 타임프레임상으로도 낮은 가격+많은 매장이라는 해자가 유지될 것으로 전망. \n7) 다만, 1) 폭발적인 성장을 기대하기 힘든 비즈니스라는 점과, 2) 마진에 대한 기대가 크지 않다는 점, 3) 밸류에이션에 대한 확인이 없어 투자는 보류. \n8) 추가 투자 시 25년 여름 트래픽 상승이 거시적인 트렌드로부터 발생한 것인지, 또는 회사의 단기적인 마케팅으로 인해 발생한 것인지 확인 필요. ",
+        "result": null,
+        "resultReturn": null
+      },
+      {
+        "date": "2025-08-13",
+        "category": "미국주식",
+        "name": "Applovin Corp",
+        "ticker": "APP",
+        "tag": "모바일 광고",
+        "industry": "Artificial Intelligence (AI)",
+        "decision": "보류(핵심 경쟁력에 대한 이해 부족)",
+        "thesis": null,
+        "logic": "1) 앞으로 모바일 시장 확장 runway남아 있음 (개도국향 hardware, 한국과 유사한 모바일 시장 성장 기대 가능) -> 이건 너무 거시적인 얘기인듯? applovin매출도 미국향 매출이 대부분일 것 같은데 해당 논리는 적합하지 않은듯. \n2) 모바일 어플 내 광고 설정 및 소비자 행동 데이터 분석 능력이 핵심 역량 -> Meta와 비교했을 때  해당 역량은 유지할 수 있을 것으로 보이나, Google과 비교 시 우위를 유지하기 힘들 것으로 보임. Google의 Ad Mop에서도 있는 기능이기 때문. 어떤 핵심 경쟁력이 있는지 추가 조사 필요. \n3) 앱러빈은 게임내 광고를 통해 유튜브, 틱톡 등 타 업체 대비 높은 roas를 달성.\n4) 높은 ROE와 GPM 등이 당사의 경제적 해자를 보여줌. \n5) yoy 매출성장률 40%대로 나오고 컨콜 내용 종합했을 때 기존 게임광고에서 20-30%수준의 매출 성장이 예상됨. \n6) 신사업인 커머스 부문에서 성장이 나올지가 핵심인데, 커머스 광고의 메인플레이어가 누군지 추가 확인 필요. 아마존 등의 경우 앱러빈이 가진 경쟁우위가 희석될 수 있음. \n7) AI를 통해 실질적인 수익성 개선이 가능하다는 점, CEO가 인당 EBITDA를 얘기하는 등 효율적인 운영을 강조한다는 점은 긍정적. \n8) 메타의 per 30배 대비 소폭 성장프리미엄이 적용된 40 수준. 조정 이슈 있을 때 매입 고려 가능. ",
+        "result": null,
+        "resultReturn": null
+      },
+      {
+        "date": "2025-08-13",
+        "category": "미국주식",
+        "name": "Bloom Energy Corp",
+        "ticker": "BE",
+        "tag": "DC향 연료전지 납품",
+        "industry": "Artificial Intelligence (AI)",
+        "decision": "5% 수준 투자(100만)",
+        "thesis": null,
+        "logic": "1) AI 데이터센터발 전력 쇼티지 우려로 빅테크들은 자체 전력원을 확충하고 있음. \n2) 1)원자력, 2) 천연가스 등이 주목받지만 원자력은 기존 원전을 재가동하는 수준에 그치고 신규원전 건설은 오래걸림, 천연가스의 경우 가스터빈 공급부족으로 28년까지 수주잔고가 이미 찬 상태\n3) 전력 수요공급 간극을 메우기 위해서는 연료전지가 적절한 대체 전력원임. 1) 전력 수요 증가에 빠르게 대응가능(계약~전력 공급까지 1년), 2) 전력 공급 scaling가능\n4) 블룸에너지는 25년 1GW, 26년 2GW~공격적으로는 3GW도 가능하도록 capa증설 예정. \n5) capa 증설에 750M수준 필요 -> 현재 cash로는 감당 안되고 추가 차입 필요, 현 LTD의 50% 수준으로 유증 가능성도 있을듯?\n밸류 고려 필요\n6) 천연가스/원자력발 전력 공급 타임라인이 많이 남은만큼, 그 틈을 메운다면 추가 성장 여력 있어보임. \n7) 천연가스 터빈 capa확장, DC capex투자 감소가 리스크 요인",
+        "result": null,
+        "resultReturn": 0
+      },
+      {
+        "date": "2025-07-09",
+        "category": "미국주식",
+        "name": "Immuneering Corp",
+        "ticker": "IMRX",
+        "tag": "췌장암 항암제",
+        "industry": "Biotech & Healthcare",
+        "decision": "거절\n(능력범위 벗어날 뿐더러, 리스크 과다)",
+        "thesis": null,
+        "logic": "1) 임상 결과가 아주 좋고, 시총이 작아서 제약사 M&A대상이 되거나 L/O시 유리하다. \n- OS, PFS(무진행생존율)이 peer대비 높고, 환자 종양 크기 또한 감소. \n- 임상 2a 중간데이터가 베스트 인클래스면 5~10억불도 기대 가능. \n2) 금리 인하시 바이오 수혜 가능 + 내부자 거래\n-> 자료만 봤을 때는 너무 좋은데... 이 자료 외적으로 챙겨야할게 있을 것 같네요",
+        "result": null,
+        "resultReturn": null
+      },
+      {
+        "date": "2025-07-09",
+        "category": "유럽주식",
+        "name": "SAP SE",
+        "ticker": "SAP",
+        "tag": "ERP 툴",
+        "industry": "Artificial Intelligence (AI)",
+        "decision": "거절\n(사업은 좋으나, Q확장 가능성이 낮고, AI를 통한 수익화 계획이 명확하지 않은 상황에서 밸류에이션 부담 존재)",
+        "thesis": null,
+        "logic": "1) On-premise에서 Cloud로 매출이 고객사가 전환함에 따라 매출 규모 확대 및 OP확대\n2) 풍부한 데이터셋을 바탕으로 AI 활용 적합-> 고객사 lock in 효과 강화\n3) 24-25년 들어 Cloud+AI 붐으로 PER이 급상승(15-20 -> 35-40배)로 밸류에이션 부담. \n- AI를 통한 구체적 수익화 경로가 명확하지 않은 시점에서 일단 기대감이 미리 반영된 것으로 보임. \n결론: 25년 들어 분기 실적 개선이 기대 + AI활용 가능성이 기대되나, 밸류에이션이 상당부분 반영된 것으로 보여 신규 진입은 적절치 않다고 생각",
+        "result": null,
+        "resultReturn": null
+      },
+      {
+        "date": "2025-07-09",
+        "category": "미국주식",
+        "name": "Mp Materials Corp",
+        "ticker": "MP",
+        "tag": "희토류 광산",
+        "industry": "Commodities",
+        "decision": "거절\n(1) 생산 계획이 나오긴 했지만, 영구자석 생산 시 매출 증분 판단이 어려웠음. \n(2) 희토류 중 부가가치가 높은 중희토류가 아닌 경희토류에 집중하고 있으며, 이 마저도 중국과의 분쟁 이슈를 제외하고는 특별한 점이 없다고 생각.\n(3) 테슬라 등의 공급처도 중국업체로부터 희토류를 공급받는만큼",
+        "thesis": null,
+        "logic": "1) 중국과의 무역분쟁으로 희토류 제한 카드가 나올 경우 MP가 수혜를 볼 수 있음. \n2) 미국 유일한 희토류 광산으로 휴머노이드 로봇 등 영구 자석 수요 증가 시 수혜가능",
+        "result": "투자판단에 있어 확실한 매출 성장이 그려진다?\n-> 거의 없는 경우일 뿐더러, 오히려 너무 세부단의 데이터를 보고 있다는 방증일수도 있음. \n-> 투자는 큰 흐름을 파악하는 것이 중요해보인다. \n나는 MP가 대중무역갈등이라는 소재 원툴이라고 생각하고, 실제 넘버스가 찍히긴 힘들다고 생각해서 투자를 안했는데, 사실 내러티브만으로도 가는 주식이 많다. \n+ 미국 국방부입장에서 유일한 영구자석업체를 키울 수 밖에 없고, 이를 위해 1) CPS지분투자 15%, 2) 10억 대출약정을 제공한 것이다. 또한 MP의 대주주중 중국 기업이 있다는 점을 고려하면, 미 국방부의 이런 결정은 더욱 이해가 된다. \n결론은, 큰 흐름상에서 잘될 수 밖에 없는 기업에 투자하는 것도 방법이라는 거다. ",
+        "resultReturn": null
+      },
+      {
+        "date": "2025-05-01",
+        "category": "한국주식",
+        "name": "Artist Studio Inc",
+        "ticker": "KOSDAQ:200350",
+        "tag": "오징어 게임3",
+        "industry": "Entertainment",
+        "decision": "보류",
+        "thesis": null,
+        "logic": "테마\n1) 오징어게임3 관련으로 2때 시세 줬던 주식 & 대장주, 덱스터, 위지윅스튜디오\n2) 오징어 게임 2 출시 2달 전 기준 최저점-> 고점 120%, 최고점-> 최고점 30%. but 중간에 큰 폭 하락 있었음.\n\n1) 공식 제작 / 촬영 발표가 뉴스에 나올 때 - 넷플 보도자료, ir자료, 뉴스\n2) 거래량 평균 이상 + 장대양봉\n3) sns 커뮤니티 트렌드 급상승\n\n\n1) 루머성 뉴스 나올 때\n2) 장 전체 하락장\n\n오징어 게임 3 일정 : 2025년 6월 27일",
+        "result": "-> 하방폭보다 훨씬 빠졌네... 위로는 별로 올라가지도 못했어. 이유는? 오징어 게임 3은 너무 기대가 안되고 시사성도 없었어",
+        "resultReturn": null
+      },
+      {
+        "date": "2025-05-01",
+        "category": "한국주식",
+        "name": "Dexter Studios Co Ltd",
+        "ticker": "KOSDAQ:206560",
+        "tag": "오징어 게임3",
+        "industry": "Entertainment",
+        "decision": "보류",
+        "thesis": null,
+        "logic": "테마\n1) 오징어게임3 관련으로 2때 시세 줬던 주식 & 대장주, 덱스터, 위지윅스튜디오",
+        "result": "-> 결론 삼탕은 위험하다",
+        "resultReturn": null
+      },
+      {
+        "date": "2025-05-01",
+        "category": "한국주식",
+        "name": "Wysiwyg Studios Co Ltd",
+        "ticker": "KOSDAQ:299900",
+        "tag": "오징어 게임3",
+        "industry": "Entertainment",
+        "decision": "보류",
+        "thesis": null,
+        "logic": "테마\n1) 오징어게임3 관련으로 2때 시세 줬던 주식 & 대장주, 덱스터, 위지윅스튜디오",
+        "result": null,
+        "resultReturn": null
+      }
+    ]
+  },
+  "watchlist": {
+    "제로투원": [
+      {
+        "source": "제로투원",
+        "market": "중국주식",
+        "name": "Xiaomi Corp",
+        "ticker": "XIACF",
+        "tag": "전자제품 및 주변기기",
+        "industry": "Consumer Goods",
+        "dailyChange": -0.02696078431,
+        "currentPrice": 3.96,
+        "marketCap": 8013.670791,
+        "idea": null
+      },
+      {
+        "source": "제로투원",
+        "market": "중국주식",
+        "name": "Bytedance",
+        "ticker": "비상장",
+        "tag": "숏폼 플랫폼/소셜미디어/AI",
+        "industry": "Artificial Intelligence (AI)",
+        "dailyChange": null,
+        "currentPrice": null,
+        "marketCap": "#N/A",
+        "idea": null
+      },
+      {
+        "source": "제로투원",
+        "market": "미국주식",
+        "name": "Camtek Ltd",
+        "ticker": "CAMT",
+        "tag": "반도체",
+        "industry": "Semiconductors",
+        "dailyChange": -0.01121749476,
+        "currentPrice": 174.53,
+        "marketCap": 81.24127101,
+        "idea": null
+      },
+      {
+        "source": "제로투원",
+        "market": "미국주식",
+        "name": "KLA Corp",
+        "ticker": "KLA",
+        "tag": "반도체",
+        "industry": "Semiconductors",
+        "dailyChange": 0.02236860162,
+        "currentPrice": 1490,
+        "marketCap": 2277.167595,
+        "idea": null
+      },
+      {
+        "source": "제로투원",
+        "market": "미국주식",
+        "name": "Applied Materials Inc",
+        "ticker": "AMAT",
+        "tag": "반도체",
+        "industry": "Semiconductors",
+        "dailyChange": 0.004248259219,
+        "currentPrice": 399.5,
+        "marketCap": 3170.454767,
+        "idea": null
+      },
+      {
+        "source": "제로투원",
+        "market": "미국주식",
+        "name": "Brookfield Corp",
+        "ticker": "BN",
+        "tag": "대체자산운용(인프라/PE + 보험)",
+        "industry": "Financials",
+        "dailyChange": -0.004488542405,
+        "currentPrice": 42.14,
+        "marketCap": 1032.783118,
+        "idea": null
+      },
+      {
+        "source": "제로투원",
+        "market": "미국주식",
+        "name": "KKR & Co Inc",
+        "ticker": "KKR",
+        "tag": "대체자산운용(PE/Credit + 보험)",
+        "industry": "Financials",
+        "dailyChange": -0.01734353119,
+        "currentPrice": 91.22,
+        "marketCap": 813.2726506,
+        "idea": null
+      },
+      {
+        "source": "제로투원",
+        "market": "미국주식",
+        "name": "Oracle Corp",
+        "ticker": "ORCL",
+        "tag": "AI 데이터센터/네오클라우드",
+        "industry": "Data Centers",
+        "dailyChange": 0.001668359205,
+        "currentPrice": 138.09,
+        "marketCap": 3971.530435,
+        "idea": null
+      }
+    ],
+    "에스티어": [
+      {
+        "source": "에스티어",
+        "market": "미국주식",
+        "name": "Autodesk Inc",
+        "ticker": "ADSK",
+        "tag": "사무자동화&CAD",
+        "industry": "Software-Application",
+        "dailyChange": -0.03057907988,
+        "currentPrice": 218.45,
+        "marketCap": 46.09294936,
+        "idea": null
+      },
+      {
+        "source": "에스티어",
+        "market": "미국주식",
+        "name": "Tesla Inc",
+        "ticker": "TSLA",
+        "tag": "자율주행 & 휴머노이드 로봇",
+        "industry": "Humanoid Robot",
+        "dailyChange": 0.009799426934,
+        "currentPrice": 349,
+        "marketCap": 1093.568503,
+        "idea": null
+      }
+    ],
+    "수영님": [
+      {
+        "source": "수영님",
+        "market": "미국주식",
+        "name": "Constellation Energy Corp",
+        "ticker": "CEG",
+        "tag": "전력 발전 - 원자력, 천연가스",
+        "industry": "Electrical Equipemnt",
+        "dailyChange": 0.0223015165,
+        "currentPrice": 286.5,
+        "marketCap": 103.7974316,
+        "idea": null
+      },
+      {
+        "source": "수영님",
+        "market": "한국주식",
+        "name": "Pemtron Corp",
+        "ticker": "KOSDAQ:168360",
+        "tag": "반도체 3D 검사장비",
+        "industry": "Semiconductors",
+        "dailyChange": 0.04038004751,
+        "currentPrice": 21050,
+        "marketCap": 448.118294,
+        "idea": "펨트론은 반도체 3D 검사장비 업체로 HBM 및 메모리 슈퍼사이클에 따른 고객사 검사장비 증설 기대로 상승중. \n"
+      }
+    ],
+    "재욱님": [
+      {
+        "source": "재욱님",
+        "market": "미국주식",
+        "name": "Axon Enterprise Inc",
+        "ticker": "AXON",
+        "tag": "테이저건",
+        "industry": "Security",
+        "dailyChange": -0.01558073654,
+        "currentPrice": 345.94,
+        "marketCap": 28.24612,
+        "idea": null
+      }
+    ],
+    "동하님": [
+      {
+        "source": "동하님",
+        "market": "미국주식",
+        "name": "Babcock & Wilcox Enterprises Inc",
+        "ticker": "BW",
+        "tag": "석탄화력발전 보일러 제조사",
+        "industry": "Electrical Equipemnt",
+        "dailyChange": -0.03325688073,
+        "currentPrice": 17.44,
+        "marketCap": 2.358862968,
+        "idea": null
+      }
+    ],
+    "SJL 파트너스": [],
+    "정모": [
+      {
+        "source": "정모",
+        "market": "미국주식",
+        "name": "Tempus AI Inc",
+        "ticker": "TEM",
+        "tag": "AI정밀 의료",
+        "industry": "Biotech & Healthcare",
+        "dailyChange": -0.02762681159,
+        "currentPrice": 42.94,
+        "marketCap": 7.703633277,
+        "idea": null
+      },
+      {
+        "source": "정모",
+        "market": "미국주식",
+        "name": "Mp Materials Corp",
+        "ticker": "MP",
+        "tag": "희토류",
+        "industry": "Commodities",
+        "dailyChange": 0.02425778421,
+        "currentPrice": 55.24,
+        "marketCap": 9.814347474,
+        "idea": null
+      }
+    ],
+    "수훈": [
+      {
+        "source": "수훈",
+        "market": "미국주식",
+        "name": "Celestica Inc",
+        "ticker": "CLS",
+        "tag": "데이터센터",
+        "industry": "Data Centers",
+        "dailyChange": 0.06541231391,
+        "currentPrice": 351.31,
+        "marketCap": 40.25338057,
+        "idea": null
+      }
+    ],
+    "지인 픽(주경 / 우영 / 규현)": [],
+    "규현": [
+      {
+        "source": "규현",
+        "market": "미국주식",
+        "name": "Corning Inc",
+        "ticker": "GLW",
+        "tag": "통신장비",
+        "industry": "Digital Infrastructure",
+        "dailyChange": 0.008409250175,
+        "currentPrice": 171.24,
+        "marketCap": 147.0976819,
+        "idea": null
+      },
+      {
+        "source": "규현",
+        "market": "미국주식",
+        "name": "Applied Optoelectronics Inc",
+        "ticker": "AAOI",
+        "tag": "데이터센터 광 트랜시버",
+        "industry": "Digital Infrastructure",
+        "dailyChange": 0.114873838,
+        "currentPrice": 150.6,
+        "marketCap": 11.32493823,
+        "idea": null
+      },
+      {
+        "source": "규현",
+        "market": "미국주식",
+        "name": "Corning Inc",
+        "ticker": "GLW",
+        "tag": "통신장비",
+        "industry": "Digital Infrastructure",
+        "dailyChange": 0.008409250175,
+        "currentPrice": 171.24,
+        "marketCap": 147.0976819,
+        "idea": null
+      },
+      {
+        "source": "규현",
+        "market": "미국주식",
+        "name": "Applied Optoelectronics Inc",
+        "ticker": "AAOI",
+        "tag": "광 트랜시버",
+        "industry": "Digital Infrastructure",
+        "dailyChange": 0.114873838,
+        "currentPrice": 150.6,
+        "marketCap": 11.32493823,
+        "idea": null
+      }
+    ],
+    "주경": [
+      {
+        "source": "주경",
+        "market": "미국주식",
+        "name": "Bloom Energy Corp",
+        "ticker": "BE",
+        "tag": "DC향 연료전지",
+        "industry": "Digital Infrastructure",
+        "dailyChange": 0.03941211758,
+        "currentPrice": 166.7,
+        "marketCap": 47.37625582,
+        "idea": null
+      },
+      {
+        "source": "주경",
+        "market": "중국주식",
+        "name": "Ubtech Robotics Corp Ltd",
+        "ticker": "HKG:9880",
+        "tag": "자율주행 & 휴머노이드 로봇",
+        "industry": "Humanoid Robot",
+        "dailyChange": 0.01561065197,
+        "currentPrice": 108.9,
+        "marketCap": 54.82040234,
+        "idea": null
+      }
+    ],
+    "올바른 / 바바리안": [],
+    "바바리안": [
+      {
+        "source": "바바리안",
+        "market": "미국주식",
+        "name": "Planet Fitness Inc",
+        "ticker": "PLNT",
+        "tag": "헬스장",
+        "industry": "Biotech & Healthcare",
+        "dailyChange": -0.02855113636,
+        "currentPrice": 70.4,
+        "marketCap": 5.589780537,
+        "idea": null
+      },
+      {
+        "source": "바바리안",
+        "market": "미국주식",
+        "name": "Baker Hughes Co",
+        "ticker": "BKR",
+        "tag": "천연가스",
+        "industry": "Green Energy / Clean Energy",
+        "dailyChange": -0.009303058972,
+        "currentPrice": 62.83,
+        "marketCap": 62.31211297,
+        "idea": "1. DC향 발전기 수주가 올라오고 있음 (Full capa기준 매출 8%인데, 상반기 수주로 capa 80% 채움)\n2. 매출 대비 발전기 비중 고려했을 때, 다른 기업 대비 저평가 (vs. cummins, GNRC 대비 발전기 매출은 높은데 EV/EBITDA는 낮음)\n3. 가스발전 인프라에 대한 리레이팅 기대\n\n-> 수주가 1.2GW인건 ok, 근데 몇년에 걸친 계약인지? 현재 기준 발전기 매출 비중은 얼마나 되는지?\n-> 단결정 블레이드를 쓰지 않아 리드타임 강점이라 하셨는데, 그럼 내구성이 상대적으로 낮은게 아닌지?"
+      },
+      {
+        "source": "바바리안",
+        "market": "미국주식",
+        "name": "Cummins Inc",
+        "ticker": "CMI",
+        "tag": "천연가스",
+        "industry": "Green Energy / Clean Energy",
+        "dailyChange": 0.008428943191,
+        "currentPrice": 616.14,
+        "marketCap": 85.18591646,
+        "idea": null
+      },
+      {
+        "source": "바바리안",
+        "market": "미국주식",
+        "name": "Generac Holdings Inc",
+        "ticker": "GNRC",
+        "tag": "천연가스",
+        "industry": "Green Energy / Clean Energy",
+        "dailyChange": -0.001495128774,
+        "currentPrice": 207.03,
+        "marketCap": 12.14765908,
+        "idea": null
+      },
+      {
+        "source": "바바리안",
+        "market": "미국주식",
+        "name": "Caterpillar Inc",
+        "ticker": "CAT",
+        "tag": "천연가스",
+        "industry": "Green Energy / Clean Energy",
+        "dailyChange": 0.00456122073,
+        "currentPrice": 790.66,
+        "marketCap": 367.8840441,
+        "idea": null
+      },
+      {
+        "source": "바바리안",
+        "market": "미국주식",
+        "name": "GE Vernova Inc",
+        "ticker": "GEV",
+        "tag": "발전설비",
+        "industry": "Electrical Equipemnt",
+        "dailyChange": 0.02406975062,
+        "currentPrice": 991.32,
+        "marketCap": 266.5225302,
+        "idea": null
+      },
+      {
+        "source": "바바리안",
+        "market": "일본주식",
+        "name": "Mitsubishi Heavy Industries Ltd",
+        "ticker": "MHVYF",
+        "tag": "발전설비",
+        "industry": "Electrical Equipemnt",
+        "dailyChange": 0.0009800718719,
+        "currentPrice": 30.64,
+        "marketCap": 16007.95502,
+        "idea": null
+      },
+      {
+        "source": "바바리안",
+        "market": "유럽주식",
+        "name": "Siemens AG",
+        "ticker": "SIE",
+        "tag": "발전설비",
+        "industry": "Electrical Equipemnt",
+        "dailyChange": 0.01190738699,
+        "currentPrice": 229.45,
+        "marketCap": 178.0571638,
+        "idea": null
+      }
+    ],
+    "기타": [
+      {
+        "source": "기타",
+        "market": "한국주식",
+        "name": "Incar Finance Service Co Ltd",
+        "ticker": "211050",
+        "tag": "GA업체(보험설계사)",
+        "industry": "Financials",
+        "dailyChange": -0.005119453925,
+        "currentPrice": 11660,
+        "marketCap": 5744.142756,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "한국주식",
+        "name": "KT&G Corp",
+        "ticker": "033780",
+        "tag": "Cigarette",
+        "industry": "Consumer Goods",
+        "dailyChange": 0.006740196078,
+        "currentPrice": 164300,
+        "marketCap": 188413.6538,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "한국주식",
+        "name": "Kumho Petro Chemical Co Ltd",
+        "ticker": "KRX:011780",
+        "tag": "NB Latex",
+        "industry": "Petro Chemicals",
+        "dailyChange": 0.00534351145,
+        "currentPrice": 131700,
+        "marketCap": 36065.03091,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Kinder Morgan Inc",
+        "ticker": "KMI",
+        "tag": "천연가스 미드스트림",
+        "industry": "Green Energy / Clean Energy",
+        "dailyChange": -0.008795875038,
+        "currentPrice": 32.68,
+        "marketCap": 72.70705292,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Fluence Energy Inc",
+        "ticker": "FLNC",
+        "tag": "ESS System Integrator",
+        "industry": "Green Energy / Clean Energy",
+        "dailyChange": 0.01622418879,
+        "currentPrice": 13.78,
+        "marketCap": 2.534627006,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "GE Vernova Inc",
+        "ticker": "GEV",
+        "tag": "전력기기",
+        "industry": "Electrical Equipemnt",
+        "dailyChange": 0.02406975062,
+        "currentPrice": 991.32,
+        "marketCap": 266.5225302,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Vertiv Holdings Co",
+        "ticker": "VRT",
+        "tag": "DC향 전력, 냉각, IT관리 솔루션",
+        "industry": "Data Centers",
+        "dailyChange": 0.02596996245,
+        "currentPrice": 295.11,
+        "marketCap": 112.9085787,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "First Solar Inc",
+        "ticker": "FSLR",
+        "tag": "태양광 발전(모듈)",
+        "industry": "Green Energy / Clean Energy",
+        "dailyChange": 0.03153358682,
+        "currentPrice": 203.47,
+        "marketCap": 21.86299406,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Nike Inc",
+        "ticker": "NKE",
+        "tag": "스포츠웨어",
+        "industry": "Consumer Goods",
+        "dailyChange": -0.03136363636,
+        "currentPrice": 42.62,
+        "marketCap": 63.11540236,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Lantheus Holdings Inc",
+        "ticker": "LNTH",
+        "tag": "방사선 진단제",
+        "industry": "Biotech & Healthcare",
+        "dailyChange": -0.0103156085,
+        "currentPrice": 80.59,
+        "marketCap": 5.236061006,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Reddit Inc",
+        "ticker": "RDDT",
+        "tag": "온라인 커뮤니티, 소셜미디어",
+        "industry": "Entertainment",
+        "dailyChange": 0.00975574505,
+        "currentPrice": 139.73,
+        "marketCap": 26.69341754,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Lam Research Corp",
+        "ticker": "LRCX",
+        "tag": "반도체 장비 제조업체 - 식각, 증착 장비",
+        "industry": "Semiconductors",
+        "dailyChange": 0.01893646622,
+        "currentPrice": 263.66,
+        "marketCap": 329.2509664,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Eli Lilly And Co",
+        "ticker": "LLY",
+        "tag": "비만 치료제",
+        "industry": "Biotech & Healthcare",
+        "dailyChange": -0.01673283873,
+        "currentPrice": 939.47,
+        "marketCap": 887.6289843,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Upstart Holdings Inc",
+        "ticker": "UPST",
+        "tag": "소비자 대출",
+        "industry": "Financials",
+        "dailyChange": -0.005502567865,
+        "currentPrice": 27.26,
+        "marketCap": 2.586100611,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Netflix Inc",
+        "ticker": "NFLX",
+        "tag": "OTT",
+        "industry": "Entertainment",
+        "dailyChange": 0.009123556246,
+        "currentPrice": 103.03,
+        "marketCap": 435.0177854,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Intuitive Surgical Inc",
+        "ticker": "ISRG",
+        "tag": "로봇 수술",
+        "industry": "Biotech & Healthcare",
+        "dailyChange": -0.009586791532,
+        "currentPrice": 450.62,
+        "marketCap": 160.0465234,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Nebius Group NV",
+        "ticker": "NBIS",
+        "tag": "데이터센터",
+        "industry": "Data Centers",
+        "dailyChange": 0.05959853763,
+        "currentPrice": 144.97,
+        "marketCap": 36.6798603,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "Palantir Technologies Inc",
+        "ticker": "PLTR",
+        "tag": "AI자동화",
+        "industry": "Artificial Intelligence (AI)",
+        "dailyChange": -0.01896807431,
+        "currentPrice": 128.11,
+        "marketCap": 306.2687352,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "미국주식",
+        "name": "USA Rare Earth Inc",
+        "ticker": "USAR",
+        "tag": "희토류",
+        "industry": "Commodities",
+        "dailyChange": -0.03529411765,
+        "currentPrice": 16.15,
+        "marketCap": 3.520313931,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "중국주식",
+        "name": "Contemporary Amperex Technology Co Ltd",
+        "ticker": "SHE:300750",
+        "tag": "자율주행 & 휴머노이드 로봇",
+        "industry": "Humanoid Robot",
+        "dailyChange": 0.06252403846,
+        "currentPrice": 416,
+        "marketCap": 2228.975917,
+        "idea": null
+      },
+      {
+        "source": "기타",
+        "market": "중국주식",
+        "name": "BYD Ord Shs A",
+        "ticker": "SHE:002594",
+        "tag": "자율주행 & 휴머노이드 로봇",
+        "industry": "Humanoid Robot",
+        "dailyChange": 0.02596636176,
+        "currentPrice": 101.67,
+        "marketCap": 1024.31005,
+        "idea": null
+      }
+    ],
+    "발전기 섹터": [],
+    "데이터센터 / 통신": [
+      {
+        "source": "데이터센터 / 통신",
+        "market": "미국주식",
+        "name": "Lumentum Holdings Inc",
+        "ticker": "LITE",
+        "tag": null,
+        "industry": "Digital Infrastructure",
+        "dailyChange": 0.003532820684,
+        "currentPrice": 897.3,
+        "marketCap": 64.06721016,
+        "idea": null
+      },
+      {
+        "source": "데이터센터 / 통신",
+        "market": "미국주식",
+        "name": "Coherent Corp",
+        "ticker": "COHR",
+        "tag": null,
+        "industry": "Digital Infrastructure",
+        "dailyChange": 0.0758699187,
+        "currentPrice": 307.5,
+        "marketCap": 60.045525,
+        "idea": null
+      },
+      {
+        "source": "데이터센터 / 통신",
+        "market": "미국주식",
+        "name": "Comcast Corp",
+        "ticker": "CMCSA",
+        "tag": null,
+        "industry": "Digital Infrastructure",
+        "dailyChange": -0.01360544218,
+        "currentPrice": 27.93,
+        "marketCap": 100.4878119,
+        "idea": null
+      },
+      {
+        "source": "데이터센터 / 통신",
+        "market": "중국주식",
+        "name": "Zhongji Innolight Co Ltd",
+        "ticker": "SHE:300308",
+        "tag": null,
+        "industry": "Digital Infrastructure",
+        "dailyChange": 0.0566664398,
+        "currentPrice": 734.65,
+        "marketCap": 770.0273,
+        "idea": null
+      },
+      {
+        "source": "데이터센터 / 통신",
+        "market": "미국주식",
+        "name": "Fabrinet",
+        "ticker": "FN",
+        "tag": null,
+        "industry": "Digital Infrastructure",
+        "dailyChange": 0.0662558712,
+        "currentPrice": 662.13,
+        "marketCap": 23.72154901,
+        "idea": null
+      },
+      {
+        "source": "데이터센터 / 통신",
+        "market": "미국주식",
+        "name": "Cisco Systems Inc",
+        "ticker": "CSCO",
+        "tag": null,
+        "industry": "Digital Infrastructure",
+        "dailyChange": -0.01155436633,
+        "currentPrice": 82.22,
+        "marketCap": 324.7601251,
+        "idea": null
+      },
+      {
+        "source": "데이터센터 / 통신",
+        "market": "미국주식",
+        "name": "iShares Diversified Commodity Swap UCITS ETF USD A",
+        "ticker": "COMM",
+        "tag": null,
+        "industry": "Digital Infrastructure",
+        "dailyChange": -0.004150812868,
+        "currentPrice": 722.75,
+        "marketCap": "#N/A",
+        "idea": null
+      },
+      {
+        "source": "데이터센터 / 통신",
+        "market": "미국주식",
+        "name": "Micron Technology Inc",
+        "ticker": "MU",
+        "tag": "메모리반도체",
+        "industry": "Semiconductors",
+        "dailyChange": -0.002187403409,
+        "currentPrice": 420.59,
+        "marketCap": 474.3136389,
+        "idea": null
+      },
+      {
+        "source": "데이터센터 / 통신",
+        "market": "미국주식",
+        "name": "SanDisk Corp",
+        "ticker": "SNDK",
+        "tag": "메모리반도체",
+        "industry": "Semiconductors",
+        "dailyChange": -0.0001761038778,
+        "currentPrice": 851.77,
+        "marketCap": 125.7221067,
+        "idea": null
+      },
+      {
+        "source": "데이터센터 / 통신",
+        "market": "미국주식",
+        "name": "Western Digital Corp",
+        "ticker": "WDC",
+        "tag": "메모리반도체",
+        "industry": "Semiconductors",
+        "dailyChange": 0.0161604985,
+        "currentPrice": 343.43,
+        "marketCap": 116.4357492,
+        "idea": null
+      },
+      {
+        "source": "데이터센터 / 통신",
+        "market": "미국주식",
+        "name": "Doosan Corp",
+        "ticker": "KRX:000150",
+        "tag": "메모리반도체",
+        "industry": "Semiconductors",
+        "dailyChange": -0.01092896175,
+        "currentPrice": 1281000,
+        "marketCap": 23339.38446,
+        "idea": null
+      }
+    ]
+  },
+  "trades": [
+    {
+      "date": null,
+      "rationale": null,
+      "action": "3차 매수",
+      "market": "미국주식",
+      "name": "Applied Optoelectronics Inc",
+      "ticker": "AAOI",
+      "tag": "데이터센터 광 트랜시버",
+      "industry": "Digital Infrastructure",
+      "weight": 0.09086887190888221,
+      "buyPrice": 30.6093,
+      "sellPrice": 38.94,
+      "shares": 80.0,
+      "currentValue": 4555761.936,
+      "pnl": 974645.2480799994,
+      "returnPct": 0.2690455841851985
+    },
+    {
+      "date": null,
+      "rationale": null,
+      "action": "Sale",
+      "market": "미국주식",
+      "name": "Skywater Technology Inc",
+      "ticker": "SKYT",
+      "tag": "아날로그 반도체 파운드리",
+      "industry": "Semiconductors",
+      "weight": 0.01693251726098794,
+      "buyPrice": 28.52,
+      "sellPrice": 28.97,
+      "shares": 20.0,
+      "currentValue": 847129.1519999999,
+      "pnl": 13158.719999999972,
+      "returnPct": 0.013289744039270662
+    },
+    {
+      "date": "2026-01-07",
+      "rationale": "추천으로 샀다가 빠진 종목.",
+      "action": "Sale",
+      "market": "미국주식",
+      "name": "Robinhood Markets Inc",
+      "ticker": "HOOD",
+      "tag": "코인&개인투자",
+      "industry": "Digital Asset",
+      "weight": 0.013352119764920529,
+      "buyPrice": 147.48,
+      "sellPrice": 115.41,
+      "shares": 4.0,
+      "currentValue": 670684.4412,
+      "pnl": -186369.0323999999,
+      "returnPct": -0.21937045362082994
+    },
+    {
+      "date": "2026-01-07",
+      "rationale": "투자아이디어가 훼손된 상태로 방치되던 종목 정리. ",
+      "action": "Sale",
+      "market": "미국주식",
+      "name": "Super Micro Computer Inc",
+      "ticker": "SMCI",
+      "tag": "데이터센터",
+      "industry": "Data Centers",
+      "weight": 0.02130195868396146,
+      "buyPrice": 57.37,
+      "sellPrice": 29.46,
+      "shares": 25.0,
+      "currentValue": 1070009.295,
+      "pnl": -1013712.1325000001,
+      "returnPct": -0.4877492940561269
+    },
+    {
+      "date": "2026-01-07",
+      "rationale": "추천으로 샀다가 빠진 종목.",
+      "action": "Sale",
+      "market": "미국주식",
+      "name": "Robinhood Markets Inc",
+      "ticker": "CURE",
+      "tag": "코인&개인투자",
+      "industry": "Digital Asset",
+      "weight": 0.013315118186806661,
+      "buyPrice": 147.48,
+      "sellPrice": 115.08,
+      "shares": 1.0,
+      "currentValue": 199778.0,
+      "pnl": -340632.0,
+      "returnPct": -0.6303
+    }
+  ]
+};
+
+// localStorage 기반 보유종목 관리
+const LS_KEY = 'portfolio_holdings_edit';
+
+function loadHoldings() {
+  const saved = localStorage.getItem(LS_KEY);
+  if (saved) {
+    try { return JSON.parse(saved); }
+    catch(e) { return null; }
+  }
+  return null;
+}
+
+function saveHoldingsToLS(holdings) {
+  localStorage.setItem(LS_KEY, JSON.stringify(holdings));
+}
+
+function resetHoldings() {
+  if (confirm('편집한 내용을 모두 초기화하고 원본 데이터로 되돌릴까요?')) {
+    localStorage.removeItem(LS_KEY);
+    DATA.holdings.holdings = JSON.parse(JSON.stringify(ORIGINAL_DATA.holdings.holdings));
+    renderHoldings();
+  }
+}
+
+// 데이터 초기화 (localStorage 우선)
+const DATA = JSON.parse(JSON.stringify(ORIGINAL_DATA));
+const savedHoldings = loadHoldings();
+if (savedHoldings) {
+  DATA.holdings.holdings = savedHoldings;
+}
+
+let editMode = false;
+
+function toggleEditMode() {
+  editMode = !editMode;
+  renderHoldings();
+}
+
+function openAddModal() {
+  document.getElementById('modalTitle').textContent = '종목 추가';
+  document.getElementById('editIdx').value = '-1';
+  document.getElementById('f_name').value = '';
+  document.getElementById('f_ticker').value = '';
+  document.getElementById('f_market').value = '한국주식';
+  document.getElementById('f_tag').value = '';
+  document.getElementById('f_industry').value = '';
+  document.getElementById('f_buyPrice').value = '';
+  document.getElementById('f_currentPrice').value = '';
+  document.getElementById('f_shares').value = '';
+  document.getElementById('f_currentValue').value = '';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function openEditModal(idx) {
+  const h = DATA.holdings.holdings[idx];
+  document.getElementById('modalTitle').textContent = '종목 편집';
+  document.getElementById('editIdx').value = idx;
+  document.getElementById('f_name').value = h.name || '';
+  document.getElementById('f_ticker').value = h.ticker || '';
+  document.getElementById('f_market').value = h.market || '한국주식';
+  document.getElementById('f_tag').value = h.tag || '';
+  document.getElementById('f_industry').value = h.industry || '';
+  document.getElementById('f_buyPrice').value = h.buyPrice || '';
+  document.getElementById('f_currentPrice').value = h.currentPrice || '';
+  document.getElementById('f_shares').value = h.shares || '';
+  document.getElementById('f_currentValue').value = h.currentValue || '';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('editModal').classList.remove('open');
+}
+
+function saveHolding(e) {
+  e.preventDefault();
+  const idx = parseInt(document.getElementById('editIdx').value);
+  const formData = {
+    name: document.getElementById('f_name').value,
+    ticker: document.getElementById('f_ticker').value,
+    market: document.getElementById('f_market').value,
+    tag: document.getElementById('f_tag').value,
+    industry: document.getElementById('f_industry').value,
+    buyPrice: parseFloat(document.getElementById('f_buyPrice').value) || null,
+    currentPrice: parseFloat(document.getElementById('f_currentPrice').value) || null,
+    shares: parseFloat(document.getElementById('f_shares').value) || null,
+    currentValue: parseFloat(document.getElementById('f_currentValue').value) || null,
+  };
+
+  // 수익률 자동 계산
+  if (formData.buyPrice && formData.currentPrice) {
+    formData.returnPct = (formData.currentPrice - formData.buyPrice) / formData.buyPrice;
+  }
+  // 현재가치 자동 계산 (없으면)
+  if (!formData.currentValue && formData.currentPrice && formData.shares) {
+    formData.currentValue = formData.currentPrice * formData.shares;
+  }
+  // 손익 계산
+  if (formData.buyPrice && formData.currentPrice && formData.shares) {
+    formData.pnl = (formData.currentPrice - formData.buyPrice) * formData.shares;
+  }
+
+  if (idx === -1) {
+    // 신규 추가
+    formData.rank = null;
+    formData.weight = null;
+    formData.dailyChange = null;
+    formData.dailyPnl = null;
+    formData._edited = true;
+    DATA.holdings.holdings.push(formData);
+  } else {
+    // 기존 수정 (기존 값 유지하면서 덮어쓰기)
+    Object.assign(DATA.holdings.holdings[idx], formData);
+    DATA.holdings.holdings[idx]._edited = true;
+  }
+
+  saveHoldingsToLS(DATA.holdings.holdings);
+  closeModal();
+  renderHoldings();
+}
+
+function deleteHolding(idx) {
+  const name = DATA.holdings.holdings[idx].name;
+  if (confirm(name + ' 종목을 삭제할까요?')) {
+    DATA.holdings.holdings.splice(idx, 1);
+    saveHoldingsToLS(DATA.holdings.holdings);
+    renderHoldings();
+  }
+}
+
+// 유틸리티 함수
+function formatKRW(val) {
+  if (val == null) return '-';
+  if (val >= 100000000) return (val / 100000000).toFixed(1) + '억';
+  if (val >= 10000) return (val / 10000).toFixed(0) + '만';
+  return Math.round(val).toLocaleString();
+}
+
+function formatPct(val) {
+  if (val == null) return '-';
+  const pct = (val * 100).toFixed(1);
+  return (val >= 0 ? '+' : '') + pct + '%';
+}
+
+function pctClass(val) {
+  if (val == null) return '';
+  return val >= 0 ? 'positive' : 'negative';
+}
+
+function pctColor(val) {
+  if (val == null) return 'var(--text-sub)';
+  return val >= 0 ? 'var(--green)' : 'var(--red)';
+}
+
+// 탭 전환
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// 아코디언 토글
+function toggleAccordion(el) {
+  el.closest('.accordion').classList.toggle('open');
+}
+
+// 대시보드 렌더링
+function renderDashboard() {
+  const h = DATA.holdings;
+  const pv = DATA.portfolioValue;
+  const totalAssets = h.totalAssets;
+  const startVal = pv.startingValue;
+  const totalReturn = startVal ? (totalAssets - startVal) / startVal : 0;
+  const totalPnl = totalAssets - startVal;
+
+  // 자산 배분 계산
+  const cashWeight = h.summary.cash ? h.summary.cash / totalAssets : 0;
+  const usWeight = h.summary['미국주식'] ? h.summary['미국주식'].weight : 0;
+  const krWeight = h.summary['한국주식'] ? h.summary['한국주식'].weight : 0;
+  const auWeight = h.summary['호주주식'] ? h.summary['호주주식'].weight : 0;
+
+  document.getElementById('updateDate').textContent = '최종 업데이트: ' + (pv.months.length > 0 ? pv.months[pv.months.length - 1].date : '-');
+
+  let html = `
+    <div class="summary-grid">
+      <div class="summary-card full">
+        <div class="label">총 자산</div>
+        <div class="value" style="font-size: 28px;">₩${formatKRW(totalAssets)}</div>
+        <div class="sub">
+          총 수익: <span style="color:${pctColor(totalReturn)}">₩${formatKRW(totalPnl)} (${formatPct(totalReturn)})</span>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="label">한국주식</div>
+        <div class="value ${pctClass(h.summary['한국주식']?.return)}">
+          ${formatPct(h.summary['한국주식']?.return)}
+        </div>
+        <div class="sub">₩${formatKRW(h.summary['한국주식']?.value)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">미국주식</div>
+        <div class="value ${pctClass(h.summary['미국주식']?.return)}">
+          ${formatPct(h.summary['미국주식']?.return)}
+        </div>
+        <div class="sub">₩${formatKRW(h.summary['미국주식']?.value)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">호주주식</div>
+        <div class="value ${pctClass(h.summary['호주주식']?.return)}">
+          ${formatPct(h.summary['호주주식']?.return)}
+        </div>
+        <div class="sub">₩${formatKRW(h.summary['호주주식']?.value)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">예수금</div>
+        <div class="value" style="color: var(--text);">₩${formatKRW(h.summary.cash)}</div>
+        <div class="sub">${(cashWeight * 100).toFixed(1)}%</div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <h3>자산 배분</h3>
+      <canvas id="allocationChart"></canvas>
+      <div class="alloc-grid">
+        <div class="alloc-item">
+          <div class="alloc-dot" style="background: #6c5ce7;"></div>
+          <div class="alloc-info">
+            <div class="alloc-label">미국주식</div>
+            <div class="alloc-value">${(usWeight * 100).toFixed(1)}%</div>
+          </div>
+        </div>
+        <div class="alloc-item">
+          <div class="alloc-dot" style="background: #00b894;"></div>
+          <div class="alloc-info">
+            <div class="alloc-label">한국주식</div>
+            <div class="alloc-value">${(krWeight * 100).toFixed(1)}%</div>
+          </div>
+        </div>
+        <div class="alloc-item">
+          <div class="alloc-dot" style="background: #fdcb6e;"></div>
+          <div class="alloc-info">
+            <div class="alloc-label">호주주식</div>
+            <div class="alloc-value">${(auWeight * 100).toFixed(1)}%</div>
+          </div>
+        </div>
+        <div class="alloc-item">
+          <div class="alloc-dot" style="background: #636e72;"></div>
+          <div class="alloc-info">
+            <div class="alloc-label">예수금</div>
+            <div class="alloc-value">${(cashWeight * 100).toFixed(1)}%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <h3>월별 누적 수익률 (Indexed)</h3>
+      <canvas id="returnChart"></canvas>
+    </div>
+  `;
+
+  document.getElementById('tab-dashboard').innerHTML = html;
+
+  // 자산배분 도넛 차트
+  new Chart(document.getElementById('allocationChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['미국주식', '한국주식', '호주주식', '예수금'],
+      datasets: [{
+        data: [usWeight, krWeight, auWeight, cashWeight],
+        backgroundColor: ['#6c5ce7', '#00b894', '#fdcb6e', '#636e72'],
+        borderWidth: 0,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.label + ': ' + (ctx.parsed * 100).toFixed(1) + '%'
+          }
+        }
+      }
+    }
+  });
+
+  // 월별 수익률 차트
+  const months = pv.months.filter(m => m.portfolioIndexed != null);
+  const labels = months.map(m => {
+    const d = m.date;
+    if (!d) return '';
+    const parts = d.split('-');
+    return parts[0].slice(2) + '/' + parts[1];
+  });
+
+  new Chart(document.getElementById('returnChart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'My Portfolio',
+          data: months.map(m => m.portfolioIndexed ? ((m.portfolioIndexed - 1) * 100).toFixed(1) : null),
+          borderColor: '#6c5ce7',
+          backgroundColor: 'rgba(108,92,231,0.1)',
+          borderWidth: 2,
+          pointRadius: 3,
+          fill: true,
+          tension: 0.3,
+        },
+        {
+          label: 'S&P 500',
+          data: months.map(m => m.sp500Indexed ? ((m.sp500Indexed - 1) * 100).toFixed(1) : null),
+          borderColor: '#74b9ff',
+          borderWidth: 1.5,
+          pointRadius: 2,
+          borderDash: [4, 4],
+          tension: 0.3,
+        },
+        {
+          label: 'KOSPI',
+          data: months.map(m => m.kospiIndexed ? ((m.kospiIndexed - 1) * 100).toFixed(1) : null),
+          borderColor: '#00b894',
+          borderWidth: 1.5,
+          pointRadius: 2,
+          borderDash: [4, 4],
+          tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y: {
+          ticks: {
+            callback: v => v + '%',
+            color: '#8b8fa3',
+            font: { size: 10 }
+          },
+          grid: { color: 'rgba(42,45,58,0.5)' },
+        },
+        x: {
+          ticks: { color: '#8b8fa3', font: { size: 10 } },
+          grid: { display: false }
+        }
+      },
+      plugins: {
+        legend: {
+          labels: { color: '#e4e6eb', font: { size: 11 }, boxWidth: 12 }
+        }
+      }
+    }
+  });
+}
+
+// 보유종목 렌더링
+function renderHoldings() {
+  const holdings = DATA.holdings.holdings;
+  const hasEdits = localStorage.getItem(LS_KEY) != null;
+
+  // 시장별 그룹핑 (원본 인덱스 보존)
+  const groups = {};
+  holdings.forEach((h, i) => {
+    const m = h.market || '기타';
+    if (!groups[m]) groups[m] = [];
+    groups[m].push({ ...h, _idx: i });
+  });
+
+  const marketOrder = ['한국주식', '미국주식', '호주주식'];
+
+  let html = `
+    <div class="edit-toolbar">
+      <button class="${editMode ? 'danger' : 'primary'}" onclick="toggleEditMode()">
+        ${editMode ? '편집 완료' : '편집'}
+      </button>
+      ${editMode ? '<button class="primary" onclick="openAddModal()">+ 종목 추가</button>' : ''}
+      ${hasEdits ? '<button class="danger" onclick="resetHoldings()">초기화</button>' : ''}
+      ${hasEdits ? '<span class="ls-badge" style="align-self:center;">편집됨</span>' : ''}
+    </div>`;
+
+  const container = editMode ? ' edit-mode' : '';
+
+  html += `<div class="${container}">`;
+
+  marketOrder.forEach(market => {
+    const items = groups[market];
+    if (!items) return;
+
+    const summary = DATA.holdings.summary[market];
+    html += `
+      <div class="market-group-header">
+        <span>${market} (${items.length}종목)</span>
+        <span class="market-return" style="color:${pctColor(summary?.return)}">
+          ${formatPct(summary?.return)}
+        </span>
+      </div>`;
+
+    items.sort((a, b) => (b.currentValue || 0) - (a.currentValue || 0));
+    items.forEach(h => {
+      const editBadge = h._edited ? '<span class="ls-badge">수정</span>' : '';
+      html += `
+        <div class="holding-card">
+          <div class="holding-header">
+            <div class="holding-name">${h.name}${editBadge}</div>
+            <div class="holding-return" style="color:${pctColor(h.returnPct)}">
+              ${formatPct(h.returnPct)}
+            </div>
+          </div>
+          <div class="holding-meta">
+            <span class="tag market">${h.ticker}</span>
+            <span class="tag">${h.tag || h.industry || ''}</span>
+          </div>
+          <div class="holding-details">
+            <span>
+              <span class="detail-label">현재가치</span>
+              <span class="detail-value">₩${formatKRW(h.currentValue)}</span>
+            </span>
+            <span>
+              <span class="detail-label">비중</span>
+              <span class="detail-value">${h.weight ? (h.weight * 100).toFixed(1) + '%' : '-'}</span>
+            </span>
+            <span>
+              <span class="detail-label">손익</span>
+              <span class="detail-value" style="color:${pctColor(h.pnl)}">₩${formatKRW(h.pnl)}</span>
+            </span>
+            <span>
+              <span class="detail-label">일일등락</span>
+              <span class="detail-value" style="color:${pctColor(h.dailyChange)}">
+                ${h.dailyChange != null ? formatPct(h.dailyChange) : '-'}
+              </span>
+            </span>
+          </div>
+          <div class="edit-actions">
+            <button onclick="openEditModal(${h._idx})">수정</button>
+            <button class="del" onclick="deleteHolding(${h._idx})">삭제</button>
+          </div>
+        </div>`;
+    });
+  });
+
+  html += '</div>';
+  document.getElementById('tab-holdings').innerHTML = html;
+}
+
+// 투자전략 렌더링
+function renderStrategy() {
+  const s = DATA.strategy;
+  const sectorColors = ['#6c5ce7', '#00b894', '#fdcb6e', '#74b9ff'];
+
+  let html = `
+    <div class="section-title">자산배분 전략</div>
+    <div class="strategy-card">
+      <h4>전략 시점: ${s.strategyDate || '-'}</h4>
+      <p>${s.assetAllocation.replace(/\n/g, '<br>')}</p>
+    </div>
+
+    <div class="section-title">섹터별 투자전략</div>
+    <div class="sector-bar">
+      ${s.sectors.map((sec, i) => `
+        <div style="width:${(sec.weight || 0) * 100}%; background:${sectorColors[i]}">
+          ${sec.name}<br>${((sec.weight || 0) * 100)}%
+        </div>
+      `).join('')}
+    </div>
+    <div class="strategy-card">
+      ${s.sectors.map((sec, i) => `
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border);">
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span style="width:10px;height:10px;border-radius:50%;background:${sectorColors[i]};display:inline-block;"></span>
+            ${sec.name}
+          </span>
+          <span style="color:var(--text-sub);">비중 ${((sec.weight || 0) * 100)}% / 목표수익률 ${((sec.targetReturn || 0) * 100)}%</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="strategy-card">
+      <h4>투자 전략 상세</h4>
+      <p>${s.investmentStrategy.replace(/\n/g, '<br>')}</p>
+    </div>
+  `;
+
+  if (s.strategyMemo) {
+    html += `
+      <div class="strategy-card">
+        <h4>전략 메모</h4>
+        <p>${String(s.strategyMemo).replace(/\n/g, '<br>')}</p>
+      </div>`;
+  }
+
+  html += '<div class="section-title">종목별 투자판단</div>';
+
+  s.judgements.forEach(j => {
+    let decisionClass = 'hold';
+    const dec = (j.decision || '').toLowerCase();
+    if (dec.includes('매수') || dec === 'buy') decisionClass = 'buy';
+    else if (dec.includes('매도') || dec === 'sale' || dec === 'sell') decisionClass = 'sell';
+    else if (dec.includes('not')) decisionClass = 'notinvest';
+
+    const resultHtml = j.result ? `
+      <div class="field">
+        <div class="field-label">사후 결과</div>
+        <div class="field-value">${j.result.replace(/\n/g, '<br>')}</div>
+      </div>` : '';
+    const returnHtml = j.resultReturn != null ? `
+      <div class="field">
+        <div class="field-label">결과 수익률</div>
+        <div class="field-value" style="color:${pctColor(j.resultReturn)}; font-size:14px; font-weight:600;">
+          ${formatPct(j.resultReturn)}
+        </div>
+      </div>` : '';
+
+    html += `
+      <div class="accordion">
+        <div class="accordion-header" onclick="toggleAccordion(this)">
+          <span class="acc-date">${j.date || '-'}</span>
+          <span class="acc-title">${j.name}</span>
+          <span class="acc-decision ${decisionClass}">${j.decision || '-'}</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div class="field">
+            <div class="field-label">카테고리</div>
+            <div class="field-value">${j.category || '-'} / ${j.industry || '-'}</div>
+          </div>
+          ${j.thesis ? `
+          <div class="field">
+            <div class="field-label">Investment Thesis</div>
+            <div class="field-value">${j.thesis.replace(/\n/g, '<br>')}</div>
+          </div>` : ''}
+          ${j.logic ? `
+          <div class="field">
+            <div class="field-label">판단 논리</div>
+            <div class="field-value">${j.logic.replace(/\n/g, '<br>')}</div>
+          </div>` : ''}
+          ${resultHtml}
+          ${returnHtml}
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('tab-strategy').innerHTML = html;
+}
+
+// 워치리스트 렌더링
+function renderWatchlist() {
+  const groups = DATA.watchlist;
+  const groupOrder = ['제로투원', 'SJL 파트너스', '지인 픽(주경 / 우영 / 규현)', '올바른 / 바바리안', '발전기 섹터', '데이터센터 / 통신', '기타'];
+  let html = '';
+
+  // 정렬: 정의된 순서 먼저, 나머지는 이후
+  const allGroups = [...new Set([...groupOrder, ...Object.keys(groups)])];
+
+  allGroups.forEach(groupName => {
+    const items = groups[groupName];
+    if (!items || items.length === 0) return;
+
+    // 그룹명 단순화
+    let displayName = groupName;
+    if (groupName.includes('에스티어') || groupName.includes('수영님') || groupName.includes('재욱님') || groupName.includes('동하님')) {
+      displayName = '지인 픽';
+    }
+
+    html += `<div class="wl-group">
+      <div class="wl-group-title">${displayName} (${items.length})</div>`;
+
+    items.forEach(w => {
+      const changeColor = pctColor(w.dailyChange);
+      html += `
+        <div class="wl-card">
+          <div class="wl-card-header">
+            <div class="wl-card-name">${w.name}</div>
+            <div class="wl-card-change" style="color:${changeColor}">
+              ${w.dailyChange != null ? formatPct(w.dailyChange) : '-'}
+            </div>
+          </div>
+          <div class="wl-card-meta">
+            <span class="tag market">${w.ticker || '-'}</span>
+            <span class="tag">${w.tag || w.industry || '-'}</span>
+            ${w.market ? '<span>' + w.market + '</span>' : ''}
+            ${w.marketCap ? '<span>시총 ' + (typeof w.marketCap === 'number' ? w.marketCap.toFixed(0) + 'B' : w.marketCap) + '</span>' : ''}
+          </div>
+          ${w.idea ? '<div style="margin-top:8px;font-size:11px;color:var(--text-sub);line-height:1.5;">' + w.idea.replace(/\n/g, '<br>') + '</div>' : ''}
+        </div>`;
+    });
+
+    html += '</div>';
+  });
+
+  document.getElementById('tab-watchlist').innerHTML = html;
+}
+
+// 거래내역 렌더링
+function renderTrades() {
+  const trades = DATA.trades;
+  let html = '<div class="section-title">최근 거래내역</div>';
+
+  trades.forEach(t => {
+    const isSell = t.action.toLowerCase().includes('sale') || t.action.toLowerCase().includes('매도');
+    const actionClass = isSell ? 'sell' : 'buy';
+    const actionLabel = isSell ? '매도' : t.action;
+
+    html += `
+      <div class="trade-card">
+        <div class="trade-header">
+          <div class="trade-name">${t.name}</div>
+          <span class="trade-action ${actionClass}">${actionLabel}</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:8px;">
+          ${t.date || '-'} · ${t.ticker} · ${t.market}
+        </div>
+        <div class="trade-details">
+          <div>
+            <div class="td-label">매입가</div>
+            <div class="td-value">${t.buyPrice != null ? t.buyPrice.toLocaleString() : '-'}</div>
+          </div>
+          <div>
+            <div class="td-label">${isSell ? '매도가' : '현재가치'}</div>
+            <div class="td-value">${isSell ? (t.sellPrice != null ? t.sellPrice.toLocaleString() : '-') : '₩' + formatKRW(t.currentValue)}</div>
+          </div>
+          <div>
+            <div class="td-label">수익률</div>
+            <div class="td-value" style="color:${pctColor(t.returnPct)}">${formatPct(t.returnPct)}</div>
+          </div>
+        </div>
+        ${t.rationale ? '<div class="trade-rationale">' + t.rationale + '</div>' : ''}
+      </div>`;
+  });
+
+  document.getElementById('tab-trades').innerHTML = html;
+}
+
+// 초기 렌더링
+renderDashboard();
+renderHoldings();
+renderStrategy();
+renderWatchlist();
+renderTrades();
+</script>
+</body>
+</html>
